@@ -81,8 +81,8 @@ class MapPrefSource(private val map: Map<String, Any?>) : PrefSource {
 }
 
 data class ModuleConfig(
-    /** 总开关：侧边索引（2026-10-19 用户要求所有开关默认关闭） */
-    val enabled: Boolean = false,
+    /** 总开关：侧边索引（2026-10-20 改回默认开：它是功能入口，关掉等于索引完全用不了） */
+    val enabled: Boolean = true,
     /** 左右两侧都能呼出（老键，保留兼容；新配置看 triggerSide） */
     val bothSides: Boolean = false,
     /** 呼出侧：right（默认）/ left / both */
@@ -180,7 +180,7 @@ data class ModuleConfig(
 
         fun read(src: PrefSource, sourceName: String): ModuleConfig {
             return ModuleConfig(
-                enabled = src.getBoolean(PrefKeys.ENABLED, false),
+                enabled = src.getBoolean(PrefKeys.ENABLED, true),
                 bothSides = src.getBoolean(PrefKeys.BOTH_SIDES, false),
                 triggerSide = src.getString(PrefKeys.TRIGGER_SIDE, null)
                     ?: if (src.getBoolean(PrefKeys.BOTH_SIDES, false)) "both" else "right",

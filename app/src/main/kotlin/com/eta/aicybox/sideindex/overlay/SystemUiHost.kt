@@ -27,6 +27,7 @@ object SystemUiHost {
             return
         }
         if (controller == null) {
+            XLog.a("SIDEINDEX_HOST_SYNC 新建控制器")
             BackGestureGate.install(context.classLoader)
             // 返回箭头状态读取（1.31.17）：钩 SideGestureNavView 构造拿实例，
             // 供触摸旁听判断「箭头显示中」时不给索引呼出。

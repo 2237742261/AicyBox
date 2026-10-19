@@ -335,7 +335,7 @@ class OverlayController(
         running = true
         config = configProvider()
         AppRepository.starLimit = config.gridColumns * 2
-        XLog.i("索引浮层启动：${config.summary()}")
+        XLog.a("索引浮层启动：${config.summary()}")
         try { context.registerComponentCallbacks(componentCallbacks) } catch (t: Throwable) { XLog.d("注册配置回调失败：$t") }
         registerSelfRemovalWatcher()
         registerScreenWatcher()

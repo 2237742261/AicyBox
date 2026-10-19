@@ -119,8 +119,9 @@ internal object ModulePreferences {
     const val MAX_RADIAL_VIBRATE_STRENGTH = 100
 
     const val DEFAULT_ENABLED = false
-    /** @author bomo 2026-10-19 用户要求「所有开关默认关闭」：左右角落热区默认不开。 */
-    const val DEFAULT_CORNER_ENABLED = false
+    /** @author bomo 2026-10-20 改回 true：它是**呼出入口**，关掉等于小窗完全用不了
+     *  （而且两个键都是 false 时设置页仍显示「常规」，看着像好的，实际没热区）。 */
+    const val DEFAULT_CORNER_ENABLED = true
     const val DEFAULT_CORNER_TRIGGER_RANGE_DP = 50
 
     /**
@@ -129,8 +130,8 @@ internal object ModulePreferences {
      * 早前默认「不执行」会让双击小横条看起来像功能失效，故默认恢复为可用状态。
      */
     val DEFAULT_OUTSIDE_TAP_CLOSE_MODE = OutsideTapCloseMode.HandleDoubleTap
-    /** @author bomo 2026-10-19 所有开关默认关闭。 */
-    const val DEFAULT_HANDLE_SWIPE_UP_TO_MINI_ENABLED = false
+    /** @author bomo 2026-10-20 改回 true：同上，上滑小横条呼小窗也是入口。 */
+    const val DEFAULT_HANDLE_SWIPE_UP_TO_MINI_ENABLED = true
     /** @author bomo 2026-10-19 所有开关默认关闭。 */
     const val DEFAULT_PAUSE_IN_LANDSCAPE = false
     /** @author bomo 2026-10-19 所有开关默认关闭。 */

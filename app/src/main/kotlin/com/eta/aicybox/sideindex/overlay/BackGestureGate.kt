@@ -81,6 +81,12 @@ object BackGestureGate {
 
     private var installed = false
     private val seenReceivers = HashSet<String>()
+
+    /** 只在第一次说：出现过哪几类手势接收器（排障用，恒输出） */
+    private val compatSeen = HashSet<String>()
+
+    /** 只在第一次说：哪一类手势接收器挖不到监听器字段 */
+    private val compatMiss = HashSet<String>()
     private val hookedListeners = HashSet<String>()
 
     /** 本次手势是否从感应带内开始（开始后整根跟着走，手指滑出带子也算） */
@@ -107,8 +113,77 @@ object BackGestureGate {
     fun install(cl: ClassLoader) {
         if (installed) return
         installed = true
+        hookDispatch(cl)
         hookReceivers(cl)
         hookShadeExpansion(cl)
+    }
+
+    /**
+     * @author bomo 2026-10-20 兜底旁听：直接钩 `InputEventReceiver.dispatchInputEvent`。
+     *
+     * 为什么需要：ColorOS 的返回手势监视器（`DisplayBackGestureHandlerImpl`）在 **SystemUI 启动早期**
+     * 就把它的 `InputChannelCompat$InputEventReceiver` 实例建好了，而模块是延迟注入的 ——
+     * 只钩构造函数的话一个实例都碰不到（0.3.5 实测：日志里一个「手势接收器」都没出现，
+     * 手势完全旁听不到，索引永远呼不出）。
+     *
+     * `dispatchInputEvent` 是 `InputEventReceiver` 自己的私有入口，所有子类（含已存在的实例）
+     * 的每个输入事件都会经过它，所以在这里拦不依赖实例何时创建。
+     *
+     * 代价：SystemUI 进程里每个输入事件都会过一下这里，所以关着（[active] = false）时尽快返回。
+     */
+    private fun hookDispatch(cl: ClassLoader) {
+        val cls = LxApi.findClass("android.view.InputEventReceiver", cl)
+        if (cls == null) {
+            XLog.w("触摸旁听：进程里没有 InputEventReceiver（无法旁听）")
+            return
+        }
+        val m = try {
+            cls.declaredMethods.firstOrNull {
+                it.name == "dispatchInputEvent" && it.parameterTypes.size == 2 &&
+                    it.parameterTypes[1] == InputEvent::class.java
+            }
+        } catch (_: Throwable) {
+            null
+        }
+        if (m == null) {
+            XLog.w("触摸旁听：没找到 InputEventReceiver.dispatchInputEvent")
+            return
+        }
+        val ok = LxApi.hookBefore(m) { scope ->
+            try {
+                onRawEvent(scope.chain.args.getOrNull(1) as? MotionEvent)
+            } catch (_: Throwable) {
+            }
+        }
+        XLog.w(if (ok) "触摸旁听：dispatchInputEvent 已接管（覆盖已存在的接收器）" else "触摸旁听：dispatchInputEvent 钩挂失败")
+    }
+
+    /**
+     * 来自 [hookDispatch] 的事件。
+     *
+     * 一个 receiver 的事件坐标是**它自己窗口**的坐标系：只有全屏（窗口在 0,0）的那几条通道
+     * （返回手势监视器、锁屏、通知中心）才满足 raw == 本地坐标，用这个条件把窗口量级的事件滤掉。
+     * 锁屏／控制中心那条由 `SystemCover` 在 DOWN 时挡掉（见 onListenerEvent）。
+     */
+    private fun onRawEvent(e: MotionEvent?) {
+        if (e == null) return
+        val down = e.actionMasked == MotionEvent.ACTION_DOWN
+        if (!active && !down) return
+        val rx = e.rawX
+        val ry = e.rawY
+        if (abs(rx - e.x) > 1f || abs(ry - e.y) > 1f) return
+        if (down && sideOf(rx, ry) == 0) return
+        val copy = try {
+            MotionEvent.obtain(e)
+        } catch (_: Throwable) {
+            return
+        }
+        try {
+            copy.setLocation(rx, ry)
+            onListenerEvent(copy)
+        } finally {
+            copy.recycle()
+        }
     }
 
     fun update(right: Rect?, left: Rect?, on: Boolean) {
@@ -217,7 +292,7 @@ object BackGestureGate {
     private fun hookReceivers(cl: ClassLoader) {
         val base = LxApi.findClass("android.view.InputEventReceiver", cl)
         if (base == null) {
-            XLog.d("触摸旁听：进程里没有 InputEventReceiver")
+            XLog.w("触摸旁听：进程里没有 InputEventReceiver（无法旁听）")
             return
         }
         val n = LxApi.hookConstructorsAfter(base) { obj ->
@@ -227,9 +302,9 @@ object BackGestureGate {
             }
         }
         if (n > 0) {
-            XLog.i { "触摸旁听：已开始监听输入接收器（$n 个构造）" }
+            XLog.w("触摸旁听：已开始监听输入接收器（$n 个构造）")
         } else {
-            XLog.d("触摸旁听：钩 InputEventReceiver 构造失败")
+            XLog.w("触摸旁听：钩 InputEventReceiver 构造失败")
         }
     }
 
@@ -237,7 +312,13 @@ object BackGestureGate {
         val cn = obj.javaClass.name
         if (seenReceivers.add(cn)) XLog.d { "触摸旁听：输入接收器 $cn" }
         if (!cn.contains("InputChannelCompat")) return
-        findListener(obj)?.let { hookListener(it, cn) }
+        if (compatSeen.add(cn)) XLog.w("触摸旁听：出现手势接收器 $cn")
+        val listener = findListener(obj)
+        if (listener == null) {
+            if (compatMiss.add(cn)) XLog.w("触摸旁听：$cn 找不到监听器字段（这一类旁听不到）")
+            return
+        }
+        hookListener(listener, cn)
     }
 
     private fun findListener(obj: Any): Any? {
@@ -281,7 +362,11 @@ object BackGestureGate {
             }
             if (ok) n++ else XLog.d { "触摸旁听：钩 ${m.name} 失败" }
         }
-        if (n > 0) XLog.i { "触摸旁听：监听器 $lc（来自 $owner）钩住 $n 个入口" }
+        if (n > 0) {
+            XLog.w("触摸旁听：监听器 $lc（来自 $owner）钩住 $n 个入口")
+        } else {
+            XLog.w("触摸旁听：监听器 $lc 没有可钩的入口")
+        }
         if (lc.contains("BackGesture")) findInputMonitor(listener)
     }
 

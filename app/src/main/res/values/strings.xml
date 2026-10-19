@@ -177,7 +177,7 @@
     <!-- @author bomo 2026-10-19 索引页改为直接在页内铺设置项（与「小窗」「建议」页同风格），不再跳二级 Activity -->
     <string name="index_trigger_side_title">呼出方式</string>
     <string name="index_trigger_side_summary">从哪一侧边缘滑动呼出字母索引</string>
-    <string name="index_side_right">右侧（默认）</string>
+    <string name="index_side_right">右侧</string>
     <string name="index_side_left">左侧</string>
     <string name="index_side_both">两侧均可</string>
     <string name="index_trigger_width_title">触发宽度</string>

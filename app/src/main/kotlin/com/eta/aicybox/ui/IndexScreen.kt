@@ -504,6 +504,10 @@ private fun IndexSliderPreference(
     LaunchedEffect(value, enabled) {
         if (!isDragging) draftValue = value.toFloat()
     }
+    // @author bomo 2026-10-20 数值并到标题里（"触发宽度 · 20 dp"）：
+    // 原来走 SliderPreference 的 valueText，右侧要占一格宽度，说明文字只能挤在半行里换行，
+    // 看着和别的开关说明没对齐。现在数值跟标题同一行，说明文字吃满整行。
+    val valueLabel = stringResource(unitRes, draftValue.roundToInt())
     SliderPreference(
         value = draftValue,
         onValueChange = { raw ->
@@ -512,9 +516,8 @@ private fun IndexSliderPreference(
             draftValue = draft.toFloat()
             onPreview(draft)
         },
-        title = title,
+        title = "$title · $valueLabel",
         summary = summary,
-        valueText = stringResource(unitRes, draftValue.roundToInt()),
         enabled = enabled,
         startAction = { PreferenceIcon(icon, enabled) },
         valueRange = minValue.toFloat()..maxValue.toFloat(),

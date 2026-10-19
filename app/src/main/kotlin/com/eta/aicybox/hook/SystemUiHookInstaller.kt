@@ -116,6 +116,11 @@ internal class SystemUiHookInstaller(
     private fun startSideIndex(context: Context) {
         try {
             com.eta.aicybox.sideindex.LxApi.attach(module)
+            // @author bomo 2026-10-20 移植时漏了这一步：ConfigReader 没拿到 Context 就永远读不到
+            // Settings.Secure 通道，OverlayController 每 1.2 秒拿一次 IDLE 配置（enabled=false），
+            // 表现为「索引怎么都呼不出来」，日志里刷 "暂时读不到模块配置"。
+            com.eta.aicybox.sideindex.config.ConfigReader.attach(context)
+            com.eta.aicybox.sideindex.config.ConfigReader.current()
             com.eta.aicybox.sideindex.overlay.SystemUiHost.sync(context)
             module.logFiltered(Log.INFO, TAG, "SYSTEMUI_SIDE_INDEX_READY")
         } catch (e: ReflectiveOperationException) {

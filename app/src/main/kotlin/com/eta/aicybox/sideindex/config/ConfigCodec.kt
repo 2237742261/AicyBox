@@ -44,6 +44,7 @@ object ConfigCodec {
         put(PrefKeys.GRID_COLUMNS, config.gridColumns)
         put(PrefKeys.IMMERSIVE, config.immersive)
         put(PrefKeys.GAME_BLOCK, config.gameBlock)
+        put(PrefKeys.LANDSCAPE_PAUSE, config.landscapePause)
         put(PrefKeys.BLACKLIST, config.blacklist)
         put(PrefKeys.LOG_VERBOSE, config.logVerbose)
         put(PrefKeys.RELOAD_INTERVAL_MS, config.reloadIntervalMs)
@@ -76,6 +77,7 @@ object ConfigCodec {
         PrefKeys.BAR_FADE_MS, PrefKeys.BAR_HEIGHT_PERCENT, PrefKeys.VIBRATE_ENABLED,
         PrefKeys.VIBRATE_STRENGTH, PrefKeys.VIBRATE_PER_GROUP, PrefKeys.FREEFORM_LAUNCH,
         PrefKeys.ICON_SIZE_DP, PrefKeys.LOG_VERBOSE, PrefKeys.RELOAD_INTERVAL_MS,
-        PrefKeys.GRID_COLUMNS, PrefKeys.IMMERSIVE, PrefKeys.GAME_BLOCK, PrefKeys.BLACKLIST
+        PrefKeys.GRID_COLUMNS, PrefKeys.IMMERSIVE, PrefKeys.GAME_BLOCK, PrefKeys.BLACKLIST,
+        PrefKeys.LANDSCAPE_PAUSE
     ).sorted()
 }
