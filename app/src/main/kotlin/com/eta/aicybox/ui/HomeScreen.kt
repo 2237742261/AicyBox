@@ -303,6 +303,16 @@ private fun HomeDeveloperModePreference(
     onDeveloperModeChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
+    // @author bomo 2026-10-20 用户要求：三页面的日志都归这个开关管。
+    // 光靠点击时写一次不够 —— 从「恢复默认」回来、或者索引侧配置被改过，
+    // 两边就会对不上；这里每次进首页按开关状态对齐一次（幂等，写的是同一个值）。
+    LaunchedEffect(state.settings.developerMode) {
+        runCatching {
+            PrefStore.write(context) {
+                it.putBoolean(PrefKeys.LOG_VERBOSE, state.settings.developerMode)
+            }
+        }
+    }
     Card(modifier = Modifier.fillMaxWidth()) {
         SwitchPreference(
             checked = state.settings.developerMode,

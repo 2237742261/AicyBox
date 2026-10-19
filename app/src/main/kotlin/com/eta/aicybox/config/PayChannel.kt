@@ -24,9 +24,9 @@ internal enum class PayChannel(
     companion object {
         val DEFAULT: PayChannel = WechatPayCode
 
-        /** 默认排序：两个付款码在前、扫一扫在后。 */
+        /** 默认排序：扫一扫在前、付款码在后（用户 2026-10-20 定）。 */
         val DEFAULT_ORDER: List<PayChannel> =
-            listOf(WechatPayCode, AlipayPayCode, WechatScan, AlipayScan)
+            listOf(WechatScan, AlipayScan, WechatPayCode, AlipayPayCode)
 
         /** 未知值（旧配置、手改配置）一律回落到默认渠道，绝不抛异常。 */
         fun fromStoredValue(value: String?): PayChannel =

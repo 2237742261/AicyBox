@@ -79,7 +79,7 @@
     <string name="scope_requesting">等待框架确认作用域请求</string>
     <string name="scope_request_failed">框架未完成作用域请求，点击重试</string>
 
-    <string name="module_enabled_title">启用交互模块</string>
+    <string name="module_enabled_title">启用 Flyme 小窗</string>
     <string name="module_enabled_summary_on">已开启；快捷入口与交互能力可读取此状态</string>
     <string name="module_enabled_summary_off">已关闭；模块保持无副作用</string>
     <string name="module_enabled_summary_waiting">连接框架后才能更改</string>
@@ -155,7 +155,7 @@
 
     <string name="pause_in_landscape_title">横屏时暂停</string>
     <string name="pause_in_landscape_summary">横屏时暂停模块增强，恢复竖屏后自动启用</string>
-    <string name="pause_in_game_mode_title">游戏模式时暂停</string>
+    <string name="pause_in_game_mode_title">游戏中暂停</string>
     <string name="pause_in_game_mode_summary">系统进入游戏模式时暂停模块增强，退出后自动启用</string>
     <string name="developer_mode_title">开发模式</string>
     <string name="developer_mode_summary">打开后输出小窗与索引的详细诊断日志（几何、图标度量、每次手势与工具调用），仅供排障使用</string>
@@ -172,7 +172,7 @@
     <!-- @author bomo 2026-10-19 索引（侧滑索引移植） -->
     <string name="tab_index">索引</string>
     <string name="screen_index_title">索引</string>
-    <string name="index_enabled_title">侧边字母索引</string>
+    <string name="index_enabled_title">启用侧滑索引</string>
     <string name="index_enabled_summary">在屏幕边缘上下滑动呼出字母索引，横向滑动选择应用</string>
     <!-- @author bomo 2026-10-19 索引页改为直接在页内铺设置项（与「小窗」「建议」页同风格），不再跳二级 Activity -->
     <string name="index_trigger_side_title">呼出方式</string>
@@ -186,13 +186,15 @@
     <string name="index_trigger_height_summary">字母条高度（占屏高百分比），也是能呼出的纵向范围</string>
     <string name="index_position_title">垂直位置</string>
     <string name="index_position_summary">触发区中心的高度：0 = 贴顶、50 = 居中、100 = 贴底</string>
+    <string name="index_vibrate_title">字母震动</string>
+    <string name="index_vibrate_summary">滑动切换字母时轻微震动一下，便于盲操确认</string>
     <string name="index_vibrate_strength_title">震动强度</string>
     <string name="index_vibrate_strength_summary">滑动切换字母时的震动强度，0 = 不震动</string>
     <string name="index_immersive_title">沉浸模式</string>
     <string name="index_immersive_summary">开：呼出背景是模糊的桌面壁纸；关：系统直接模糊浮层背后内容</string>
     <string name="index_global_title">全局索引</string>
     <string name="index_global_summary">在任何应用里都能呼出（关掉只在桌面呼出）</string>
-    <string name="index_game_block_title">游戏中屏蔽手势</string>
+    <string name="index_game_block_title">游戏中暂停</string>
     <string name="index_game_block_summary">游戏里不呼出（需开启全局索引，桌面不受影响）</string>
     <string name="index_landscape_pause_title">横屏时暂停</string>
     <string name="index_landscape_pause_summary">横屏时不呼出，竖屏照常</string>

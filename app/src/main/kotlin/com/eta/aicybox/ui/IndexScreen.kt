@@ -274,28 +274,47 @@ internal fun IndexScreen(
                                 onCommit = { v -> commit { it.putInt(PrefKeys.TRIGGER_POSITION_PERCENT, v) } },
                                 onPreviewEnd = { holdPreview = false },
                             )
-                            IndexSliderPreference(
-                                icon = Icons.Rounded.Vibration,
-                                title = stringResource(R.string.index_vibrate_strength_title),
-                                summary = stringResource(R.string.index_vibrate_strength_summary),
-                                value = config.vibrateStrength,
-                                minValue = 0,
-                                maxValue = 100,
-                                unitRes = R.string.index_value_percent,
-                                enabled = config.enabled,
-                                onPreview = { v ->
-                                    // 拖动时按当前强度实时震一下（120ms 节流），0 = 不震
-                                    if (v > 0) {
-                                        val now = System.currentTimeMillis()
-                                        if (now - lastVibrationAt >= 120) {
-                                            lastVibrationAt = now
-                                            Haptics.tick(context, v, null)
+                            // @author bomo 2026-10-20 用户要求：震动改成小窗页那套「开关 + 开关打开才显示强度条」。
+                            SwitchPreference(
+                                checked = config.vibrateEnabled,
+                                onCheckedChange = { value ->
+                                    commit {
+                                        it.putBoolean(PrefKeys.VIBRATE_ENABLED, value)
+                                        // 刚打开而强度还是 0 时给个能感觉到的基础值，否则「开了没反应」
+                                        if (value && config.vibrateStrength <= 0) {
+                                            it.putInt(PrefKeys.VIBRATE_STRENGTH, 40)
                                         }
                                     }
                                 },
-                                onCommit = { v -> commit { it.putInt(PrefKeys.VIBRATE_STRENGTH, v) } },
-                                onPreviewEnd = { holdPreview = false },
+                                title = stringResource(R.string.index_vibrate_title),
+                                summary = stringResource(R.string.index_vibrate_summary),
+                                enabled = config.enabled,
+                                startAction = { PreferenceIcon(Icons.Rounded.Vibration, config.enabled) },
                             )
+                            if (config.vibrateEnabled) {
+                                IndexSliderPreference(
+                                    icon = Icons.Rounded.Vibration,
+                                    title = stringResource(R.string.index_vibrate_strength_title),
+                                    summary = stringResource(R.string.index_vibrate_strength_summary),
+                                    value = config.vibrateStrength,
+                                    minValue = 0,
+                                    maxValue = 100,
+                                    unitRes = R.string.index_value_percent,
+                                    enabled = config.enabled,
+                                    onPreview = { v ->
+                                        // 拖动时按当前强度实时震一下（120ms 节流），0 = 不震
+                                        if (v > 0) {
+                                            val now = System.currentTimeMillis()
+                                            if (now - lastVibrationAt >= 120) {
+                                                lastVibrationAt = now
+                                                Haptics.tick(context, v, null)
+                                            }
+                                        }
+                                    },
+                                    onCommit = { v -> commit { it.putInt(PrefKeys.VIBRATE_STRENGTH, v) } },
+                                    onPreviewEnd = { holdPreview = false },
+                                )
+                            }
                         }
                     }
                     item(key = "display") {
@@ -329,16 +348,6 @@ internal fun IndexScreen(
                                 startAction = { PreferenceIcon(Icons.Rounded.Public, config.enabled) },
                             )
                             SwitchPreference(
-                                checked = config.gameBlock,
-                                onCheckedChange = { value ->
-                                    commit { it.putBoolean(PrefKeys.GAME_BLOCK, value) }
-                                },
-                                title = stringResource(R.string.index_game_block_title),
-                                summary = stringResource(R.string.index_game_block_summary),
-                                enabled = config.enabled,
-                                startAction = { PreferenceIcon(Icons.Rounded.SportsEsports, config.enabled) },
-                            )
-                            SwitchPreference(
                                 checked = config.landscapePause,
                                 onCheckedChange = { value ->
                                     commit { it.putBoolean(PrefKeys.LANDSCAPE_PAUSE, value) }
@@ -347,6 +356,16 @@ internal fun IndexScreen(
                                 summary = stringResource(R.string.index_landscape_pause_summary),
                                 enabled = config.enabled,
                                 startAction = { PreferenceIcon(Icons.Rounded.ScreenRotation, config.enabled) },
+                            )
+                            SwitchPreference(
+                                checked = config.gameBlock,
+                                onCheckedChange = { value ->
+                                    commit { it.putBoolean(PrefKeys.GAME_BLOCK, value) }
+                                },
+                                title = stringResource(R.string.index_game_block_title),
+                                summary = stringResource(R.string.index_game_block_summary),
+                                enabled = config.enabled,
+                                startAction = { PreferenceIcon(Icons.Rounded.SportsEsports, config.enabled) },
                             )
                             val blacklistCount =
                                 config.blacklist.split(',').count { it.isNotBlank() }

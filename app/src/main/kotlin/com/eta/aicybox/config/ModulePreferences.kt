@@ -129,7 +129,7 @@ internal object ModulePreferences {
      * 双击底部小横条是明确指向小窗的动作，不会误伤单击 / 双击空白处这类系统手势；
      * 早前默认「不执行」会让双击小横条看起来像功能失效，故默认恢复为可用状态。
      */
-    val DEFAULT_OUTSIDE_TAP_CLOSE_MODE = OutsideTapCloseMode.HandleDoubleTap
+    val DEFAULT_OUTSIDE_TAP_CLOSE_MODE = OutsideTapCloseMode.Disabled
     /** @author bomo 2026-10-20 改回 true：同上，上滑小横条呼小窗也是入口。 */
     const val DEFAULT_HANDLE_SWIPE_UP_TO_MINI_ENABLED = true
     /** @author bomo 2026-10-19 所有开关默认关闭。 */
@@ -193,7 +193,7 @@ internal object ModulePreferences {
      * 轮盘点「聚合支付」= 打开排序第一项，并在小窗下方弹出支付栏切换。
      */
     const val KEY_PAY_ORDER = "pay_order_v1"
-    const val DEFAULT_PAY_ORDER = "wechat_paycode,alipay_paycode,wechat_scan,alipay_scan"
+    const val DEFAULT_PAY_ORDER = "wechat_scan,alipay_scan,wechat_paycode,alipay_paycode"
 
     fun coerceCornerTriggerRangeDp(value: Int): Int =
         value.coerceIn(MIN_CORNER_TRIGGER_RANGE_DP, MAX_CORNER_TRIGGER_RANGE_DP)

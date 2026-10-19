@@ -1316,7 +1316,10 @@ class OverlayController(
         val base = if (Display.isLandscape(context, windowManager)) TRIGGER_DISTANCE_DP_LANDSCAPE
                    else TRIGGER_DISTANCE_DP_PORTRAIT
         val dp = base - (sens - 50) / 50f * TRIGGER_DISTANCE_RANGE_DP
-        return Display.dp(context, dp.toInt().coerceAtLeast(24)).toFloat()
+        // 用户 2026-10-20 定：**上下滑动必须超过 40dp 才呼出**，所以灵敏度再怎么调也不许低于这个底线
+        // （以前灵敏度拉满会掉到 37dp，擦边的返回手势/清屏抖动就能把索引带出来）。
+        val clamped = dp.coerceAtLeast(MIN_TRIGGER_DP)
+        return Display.dp(context, clamped.toInt().coerceAtLeast(24)).toFloat()
     }
 
     private var lastBackdropFixAt = 0L
@@ -1391,6 +1394,9 @@ class OverlayController(
 
         /** 灵敏度对触发距离的微调幅度（dp）：灵敏度 100 → -8dp，0 → +8dp。 */
         const val TRIGGER_DISTANCE_RANGE_DP = 8f
+
+        /** 触发距离的硬底线（dp）：用户要求「上下滑动超过 40dp 才呼出」，灵敏度也不许突破。 */
+        const val MIN_TRIGGER_DP = 40f
 
         /**
          * 桌面模式的竖直度要求：|dy| >= |dx| * 1.5（1.32.5 起；以前是 1f）。

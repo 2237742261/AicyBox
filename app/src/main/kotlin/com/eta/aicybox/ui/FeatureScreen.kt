@@ -106,6 +106,14 @@ internal fun FeatureScreen(
     onBubblePosChange: (Int, Int) -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // @author bomo 2026-10-20 用户要求：建议页里点气泡开关给一下震动反馈。
+    val hapticHost = androidx.compose.ui.platform.LocalView.current
+    fun tapped(change: (Boolean) -> Unit): (Boolean) -> Unit = { value ->
+        runCatching {
+            hapticHost.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+        }
+        change(value)
+    }
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberTopBarBackdrop()
     val topBarColor = topBarContainerColor(backdrop)
@@ -164,7 +172,7 @@ internal fun FeatureScreen(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             SwitchPreference(
                                 checked = aicyEnabled,
-                                onCheckedChange = onAicyEnabledChange,
+                                onCheckedChange = tapped(onAicyEnabledChange),
                                 title = stringResource(R.string.aicy_master_title),
                                 summary = stringResource(R.string.aicy_master_summary),
                                 startAction = { PreferenceIcon(Icons.Rounded.Campaign) },
@@ -175,7 +183,7 @@ internal fun FeatureScreen(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             SwitchPreference(
                                 checked = flashlightEnabled,
-                                onCheckedChange = onFlashlightEnabledChange,
+                                onCheckedChange = tapped(onFlashlightEnabledChange),
                                 title = stringResource(R.string.flashlight_bubble_title),
                                 summary = stringResource(R.string.flashlight_bubble_summary),
                                 enabled = aicyEnabled,
@@ -183,7 +191,7 @@ internal fun FeatureScreen(
                             )
                             SwitchPreference(
                                 checked = keepAwakeEnabled,
-                                onCheckedChange = onKeepAwakeEnabledChange,
+                                onCheckedChange = tapped(onKeepAwakeEnabledChange),
                                 title = stringResource(R.string.keep_awake_bubble_title),
                                 summary = stringResource(R.string.keep_awake_bubble_summary),
                                 enabled = aicyEnabled,
@@ -191,7 +199,7 @@ internal fun FeatureScreen(
                             )
                             SwitchPreference(
                                 checked = appInstallEnabled,
-                                onCheckedChange = onAppInstallEnabledChange,
+                                onCheckedChange = tapped(onAppInstallEnabledChange),
                                 title = stringResource(R.string.app_install_bubble_title),
                                 summary = stringResource(R.string.app_install_bubble_summary),
                                 enabled = aicyEnabled,
@@ -199,7 +207,7 @@ internal fun FeatureScreen(
                             )
                             SwitchPreference(
                                 checked = earphoneEnabled,
-                                onCheckedChange = onEarphoneEnabledChange,
+                                onCheckedChange = tapped(onEarphoneEnabledChange),
                                 title = stringResource(R.string.earphone_bubble_title),
                                 summary = stringResource(R.string.earphone_bubble_summary),
                                 enabled = aicyEnabled,
@@ -217,7 +225,7 @@ internal fun FeatureScreen(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             SwitchPreference(
                                 checked = wechatEnabled,
-                                onCheckedChange = onWechatEnabledChange,
+                                onCheckedChange = tapped(onWechatEnabledChange),
                                 title = stringResource(R.string.wechat_bubble_title),
                                 summary = stringResource(R.string.wechat_bubble_summary),
                                 enabled = aicyEnabled,
@@ -225,7 +233,7 @@ internal fun FeatureScreen(
                             )
                             SwitchPreference(
                                 checked = qqEnabled,
-                                onCheckedChange = onQqEnabledChange,
+                                onCheckedChange = tapped(onQqEnabledChange),
                                 title = stringResource(R.string.qq_bubble_title),
                                 summary = stringResource(R.string.qq_bubble_summary),
                                 enabled = aicyEnabled,
@@ -237,7 +245,7 @@ internal fun FeatureScreen(
                         Card(modifier = Modifier.fillMaxWidth()) {
                             SwitchPreference(
                                 checked = linkEnabled,
-                                onCheckedChange = onLinkEnabledChange,
+                                onCheckedChange = tapped(onLinkEnabledChange),
                                 title = stringResource(R.string.link_bubble_title),
                                 summary = stringResource(R.string.link_bubble_summary),
                                 enabled = aicyEnabled,
@@ -245,7 +253,7 @@ internal fun FeatureScreen(
                             )
                             SwitchPreference(
                                 checked = shareEnabled,
-                                onCheckedChange = onShareEnabledChange,
+                                onCheckedChange = tapped(onShareEnabledChange),
                                 title = stringResource(R.string.share_bubble_title),
                                 summary = stringResource(R.string.share_bubble_summary),
                                 enabled = aicyEnabled,

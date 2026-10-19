@@ -88,10 +88,19 @@ object SystemCover {
             val q = LxApi.getBooleanField(state, "qsExpanded") ||
                 LxApi.getBooleanField(state, "qsPanelVisible")
             if (kg != keyguard || sh != shade || q != qs) {
+                val expandedNow = sh && !shade
                 keyguard = kg
                 shade = sh
                 qs = q
                 XLog.d { "系统遮挡：锁屏=$kg 通知栏=$sh 控制中心=$q" }
+                // @author Eta 2026-10-20 诊断：感应带手势期间控制中心竟然展开了 → 打调用栈，
+                // 定位到底是哪条链路把面板拉起来的（抢指针只能取消窗口，拦不住别的监视器）。
+                if (expandedNow && BackGestureGate.isBandGestureActive()) {
+                    XLog.w(
+                        "系统遮挡：感应带手势期间控制中心被展开（抢指针[${BackGestureGate.pilferState()}]没拦住）"
+                    )
+                    BackGestureGate.collapseShade("感应带手势期间被拉开")
+                }
             }
         } catch (_: Throwable) {
         }

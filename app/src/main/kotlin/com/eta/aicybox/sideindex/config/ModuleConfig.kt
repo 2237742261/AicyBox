@@ -86,7 +86,7 @@ data class ModuleConfig(
     /** 左右两侧都能呼出（老键，保留兼容；新配置看 triggerSide） */
     val bothSides: Boolean = false,
     /** 呼出侧：right（默认）/ left / both */
-    val triggerSide: String = "right",
+    val triggerSide: String = "both",
     /** 仅在桌面呼出（UI 的「全局索引」开关取反）；默认 true = 全局索引关 */
     val onlyLauncher: Boolean = true,
     /**
@@ -112,16 +112,16 @@ data class ModuleConfig(
     val vibrateStrength: Int = 0,
     val vibratePerGroup: Boolean = false,
     /** 用小窗（ColorOS 弹性窗口）打开应用（默认关） */
-    val freeformLaunch: Boolean = false,
+    val freeformLaunch: Boolean = true,
     val iconSizeDp: Int = FIXED_ICON_SIZE_DP,
     /** 每行图标数（4 或 5），超出换行 */
     val gridColumns: Int = 5,
     /** 沉浸模式：开 = 背景是模糊桌面壁纸；关 = 系统直接模糊背后内容（不提取壁纸） */
     val immersive: Boolean = false,
     /** 游戏中屏蔽手势（默认关） */
-    val gameBlock: Boolean = false,
+    val gameBlock: Boolean = true,
     /** 横屏时是否暂停呼出（移植补的字段，默认关） */
-    val landscapePause: Boolean = false,
+    val landscapePause: Boolean = true,
     /** 应用黑名单：这些应用里不响应呼出（逗号分隔包名） */
     val blacklist: String = "",
     val logVerbose: Boolean = false,

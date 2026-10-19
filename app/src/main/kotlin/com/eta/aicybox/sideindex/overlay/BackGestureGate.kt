@@ -115,7 +115,49 @@ object BackGestureGate {
         installed = true
         hookDispatch(cl)
         hookReceivers(cl)
+        hookMonitorSource(cl)
         hookShadeExpansion(cl)
+    }
+
+    /**
+     * @author Eta 2026-10-20 抢指针的**第二条来路**：直接从手势处理器 / 监视器包装的构造里抓。
+     *
+     * 以前只靠「事件流里顺着接收器挖监听器 → 监听器外层挖 InputMonitor」这一条链，
+     * 一旦前面的挖掘失败（接收器类名变了、被别的事件先占满预算…）抢指针就整段静默失效，
+     * 表现是感应带内下滑把控制中心拉下来。
+     *
+     * 这两条构造钩子不依赖事件流：
+     *  - `DisplayBackGestureHandlerImpl` 每次重建都带一个 `inputMonitorCompat` 字段；
+     *  - `InputMonitorCompat` 自己就包着一个 `mInputMonitor`。
+     * 抓到就给 [monitorCandidates] 补上（已存在就不动），后续 [pilfer] 自然生效。
+     */
+    private fun hookMonitorSource(cl: ClassLoader) {
+        val handler = LxApi.findClass(
+            "com.android.systemui.navigationbar.gestural.DisplayBackGestureHandlerImpl", cl
+        )
+        if (handler == null) {
+            XLog.d("抢指针：进程里没有 DisplayBackGestureHandlerImpl（只能靠事件流挖）")
+        } else {
+            val n = LxApi.hookConstructorsAfter(handler) { obj -> captureMonitorsFrom(obj) }
+            XLog.w("抢指针：手势处理器构造钩子 ${if (n > 0) "已装上（$n 个）" else "装上失败"}")
+        }
+        val compat = LxApi.findClass("com.android.systemui.shared.system.InputMonitorCompat", cl)
+        if (compat == null) {
+            XLog.d("抢指针：进程里没有 InputMonitorCompat")
+            return
+        }
+        val m = LxApi.hookConstructorsAfter(compat) { obj -> captureMonitorsFrom(obj) }
+        if (m > 0) XLog.w("抢指针：InputMonitorCompat 构造钩子已装上（$m 个）")
+    }
+
+    /** 从某个对象（及其外层）里挖 InputMonitor 候选；已找到过就不再重复扫。 */
+    private fun captureMonitorsFrom(obj: Any?) {
+        if (obj == null || monitorCandidates.size >= 2) return
+        monitorSearched = false
+        findInputMonitor(obj)
+        if (monitorCandidates.isNotEmpty()) {
+            XLog.w("抢指针：构造钩子补到 ${monitorCandidates.size} 个 InputMonitor")
+        }
     }
 
     /**
@@ -151,11 +193,61 @@ object BackGestureGate {
         }
         val ok = LxApi.hookBefore(m) { scope ->
             try {
+                bindMonitor(scope.chain.thisObject)
                 onRawEvent(scope.chain.args.getOrNull(1) as? MotionEvent)
             } catch (_: Throwable) {
             }
         }
         XLog.w(if (ok) "触摸旁听：dispatchInputEvent 已接管（覆盖已存在的接收器）" else "触摸旁听：dispatchInputEvent 钩挂失败")
+    }
+
+    /**
+     * @author bomo 2026-10-20 抢指针（pilfer）用的 InputMonitor 绑定。
+     *
+     * 以前只有「构造钩子抓到 receiver」那条路会在 `hookListener` 末尾调 [findInputMonitor]；
+     * 改走 [hookDispatch] 之后一个 receiver 都抓不到，**monitor 永远是空的** ——
+     * `pilfer()` 静默什么都不做，表现就是用户在桌面上呼出索引时控制中心照样拉下来（防误触失效）。
+     *
+     * 这里拿 `dispatchInputEvent` 的 this 自己反推：receiver → 监听器字段 → 外层手势处理器里的
+     * InputMonitor 候选。只在还没绑上时试，且限次，避免在每个输入事件上反复反射。
+     */
+    private var bindTries = 0
+
+    /** 是否已经见过 `InputChannelCompat$InputEventReceiver`（真正的屏幕级手势通道）。 */
+    private var compatReceiverFound = false
+
+    /** 「挖不到监听器」的接收器类只报一次，避免每个事件刷屏。 */
+    private val bindMissLogged = HashSet<String>()
+
+    private fun bindMonitor(receiver: Any?) {
+        if (receiver == null || monitorCandidates.isNotEmpty()) return
+        val cn = receiver.javaClass.name
+        val compat = cn.contains("InputChannelCompat")
+        if (compat && !compatReceiverFound) {
+            XLog.w("触摸旁听：发现屏幕手势通道 $cn")
+            compatReceiverFound = true
+        }
+        // 只对屏幕级手势通道（InputChannelCompat 的接收器）反复尝试。
+        // 以前是「每个经过的接收器都试、总共试 60 次」——窗口级接收器（ViewRootImpl / 壁纸 /
+        // 指纹快捷启动…）根本没有监听器字段，一根手指的 MOVE 就能把这 60 次预算烧光，
+        // 于是本该绑定上的 InputMonitor 一次都没试到（0.3.8 重启后实测：4 分钟内 0 次绑定，
+        // 抢指针全程静默失效 → 桌面感应带内下滑把控制中心拉下来）。
+        if (!compat) {
+            if (compatReceiverFound || bindTries >= 80) return
+            bindTries++
+        }
+        val listener = findListener(receiver)
+        if (listener == null) {
+            if (bindMissLogged.size < 16 && bindMissLogged.add(cn)) {
+                XLog.w("触摸旁听：$cn 挖不到监听器（跳过）")
+            }
+            return
+        }
+        monitorSearched = false
+        findInputMonitor(listener)
+        if (monitorCandidates.isNotEmpty()) {
+            XLog.w("触摸旁听：已绑定 ${monitorCandidates.size} 个 InputMonitor（抢指针可用）")
+        }
     }
 
     /**
@@ -192,6 +284,12 @@ object BackGestureGate {
         setActive(on)
     }
 
+    /** 感应带手势是否正在进行（诊断用：SystemCover 判断控制中心是不是被这根手指拉开的）。 */
+    fun isBandGestureActive(): Boolean = bandGestureActive
+
+    /** 抢指针能力现状（诊断用）。 */
+    fun pilferState(): String = "monitors=${monitorCandidates.size} tries=$bindTries compat=$compatReceiverFound"
+
     /** 同步「现在是不是桌面」。触发区内下滑拦控制中心要用（见 onDesktop）。 */
     fun setOnDesktop(value: Boolean) {
         onDesktop = value
@@ -216,6 +314,35 @@ object BackGestureGate {
     /** 呼出成立时抢走指针（桌面/应用的同期手势收到 cancel） */
     fun pilfer() {
         for (m in monitorCandidates) pilferOn(m, 0)
+    }
+
+    /** CommandQueue 实例（[hookShadeExpansion] 顺手抓），给「控制中心被拉开」后的兜底收回用。 */
+    @Volatile private var commandQueue: Any? = null
+
+    /**
+     * @author Eta 2026-10-20 兜底：感应带手势期间控制中心还是被拉下来了 → 直接收回。
+     *
+     * 抢指针正常时不需要这条（桌面实测：抢到指针后 3/3 都拉不动控制中心）。
+     * 留着是因为抢指针依赖反射挖 `InputMonitor`，系统改动一次就可能挖不到 ——
+     * 那时用户看到的是「唤出索引顺带把控制中心拉下来」，比索引不出现更烦人。
+     */
+    fun collapseShade(reason: String): Boolean {
+        val q = commandQueue
+        if (q == null) {
+            XLog.w("控制中心兜底：还没抓到 CommandQueue，无法收回（$reason）")
+            return false
+        }
+        val variants = listOf<Array<Any?>>(arrayOf(0, true), arrayOf(0, true, 1.0f), arrayOf<Any?>(0))
+        for (args in variants) {
+            try {
+                LxApi.callMethod(q, "animateCollapsePanels", *args)
+                XLog.w("控制中心兜底：$reason → animateCollapsePanels 收回")
+                return true
+            } catch (_: Throwable) {
+            }
+        }
+        XLog.w("控制中心兜底：animateCollapsePanels 调用失败（$reason）")
+        return false
     }
 
     private val monitorCandidates = ArrayList<Any>()
@@ -261,30 +388,38 @@ object BackGestureGate {
             XLog.d("控制中心屏蔽：进程里没有 CommandQueue")
             return
         }
-        var n = 0
+        // ⚠️ 只钩「展开」相关入口 + 几个高频方法（后者纯为抓 CommandQueue 实例，给兜底收回用）。
+        // 以前为了排查把**所有 void/boolean 方法**都钩了（几十个），实测每几秒就有上百次
+        // setTopAppHidesStatusBar 过一遍钩子 —— 纯开销，而真正的展开路径压根不经过 CommandQueue。
+        val captureNames = setOf(
+            "panelsEnabled",
+            "setTopAppHidesStatusBar",
+            "onSystemBarAttributesChanged",
+            "appTransitionFinished",
+        )
         var expand = 0
+        var capture = 0
         for (m in cls.declaredMethods) {
+            val name = m.name
+            val isExpand = name.contains("xpand")
+            if (!isExpand && name !in captureNames) continue
             val rt = m.returnType
             val canSkip = rt == java.lang.Void.TYPE || rt == java.lang.Boolean.TYPE
-            val isExpand = m.name.contains("xpand")
             if (!isExpand && !canSkip) continue
             val ok = LxApi.hookBefore(m) { scope ->
+                if (commandQueue == null) commandQueue = scope.chain.thisObject
+                if (!isExpand || !canSkip) return@hookBefore
                 if (!bandGestureActive) return@hookBefore
-                // 诊断：感应带内手势期间，CommandQueue 上到底被调了哪些方法（找控制中心那条路）
-                XLog.d { "控制中心屏蔽：手势期间 CommandQueue.${m.name} 被调用" }
-                if (isExpand && canSkip) {
-                    XLog.i { "控制中心屏蔽：感应带内手势期间跳过 ${m.name}" }
-                    scope.setResult(if (rt == java.lang.Boolean.TYPE) false else null)
-                }
+                XLog.i { "控制中心屏蔽：感应带内手势期间跳过 $name" }
+                scope.setResult(if (rt == java.lang.Boolean.TYPE) false else null)
             }
             if (ok) {
-                n++
-                if (isExpand) expand++
+                if (isExpand) expand++ else capture++
             } else {
-                XLog.d { "控制中心屏蔽：钩 ${m.name} 失败" }
+                XLog.d { "控制中心屏蔽：钩 $name 失败" }
             }
         }
-        XLog.i { "控制中心屏蔽：CommandQueue 钩住 $n 个入口（其中展开 $expand 个）" }
+        XLog.i { "控制中心屏蔽：CommandQueue 钩住 $expand 个展开入口 + $capture 个取实例入口" }
     }
 
     // ---------------- 触摸旁听 ----------------
@@ -418,6 +553,11 @@ object BackGestureGate {
                     BackGestureUi.isShowing()
                 } catch (_: Throwable) {
                     false
+                }
+                XLog.d {
+                    "DOWN 落带内 x=${e.x.toInt()} y=${e.y.toInt()} 遮挡=${covered ?: "-"} " +
+                        "箭头实例=${BackGestureUi.instanceCount()} 箭头显示=$arrow 接管=$active " +
+                        "抢指针[${pilferState()}]"
                 }
                 if (arrow) {
                     trackingSide = 0
