@@ -509,6 +509,8 @@ internal class SystemUiBubbleMonitor(
                     val cb = onClick
                     // 点击临时气泡 → 只推进队列/恢复手电筒；点击手电筒 → 整体收掉。
                     dismissShownBubble()
+                    // @author bomo 2026-10-21 用户要求：点击 Aicy 气泡要有震动反馈。
+                    com.eta.aicybox.sideindex.util.Haptics.tick(context, 80, view)
                     cb?.invoke()
                     return true
                 }
@@ -525,23 +527,6 @@ internal class SystemUiBubbleMonitor(
         val aDx = kotlin.math.abs(dx)
         val aDy = kotlin.math.abs(dy)
         return if (aDy >= aDx) dy > 0 else dx > 0
-    }
-
-    private fun reportBubblePos(xPx: Int, yPx: Int) {
-        if (density <= 0f) return
-        val xDp = (xPx / density).toInt().coerceIn(0, 800)
-        val yDp = (yPx / density).toInt().coerceIn(0, 800)
-        val intent =
-            Intent(SharedStateProtocol.ACTION).apply {
-                setPackage(SharedStateProtocol.MODULE_PACKAGE)
-                putExtra(SharedStateProtocol.EXTRA_KIND, SharedStateProtocol.KIND_BUBBLE_POS)
-                putExtra(SharedStateProtocol.EXTRA_BUBBLE_POS_X, xDp)
-                putExtra(SharedStateProtocol.EXTRA_BUBBLE_POS_Y, yDp)
-            }
-        try {
-            context.sendBroadcast(intent)
-        } catch (_: Exception) {
-        }
     }
 
 private fun circleColor(color: Int): Drawable {

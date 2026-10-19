@@ -20,8 +20,5 @@ internal object HandleSwipeUpSignal {
         lastRemapUptimeMs = SystemClock.uptimeMillis()
     }
 
-    fun isWithinWindow(windowMs: Long): Boolean {
-        val last = lastRemapUptimeMs
-        return last != NEVER && SystemClock.uptimeMillis() - last <= windowMs
-    }
+
 }

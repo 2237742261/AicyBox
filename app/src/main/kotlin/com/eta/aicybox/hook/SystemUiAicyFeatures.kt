@@ -567,13 +567,6 @@ internal class SystemUiAicyFeatures(
         }
     }
 
-    /** @author bomo 2026-10-18：耳机气泡可选/自定义音乐应用列表（参考欧泡 oupao_music_custom）。 */
-    private fun customMusicPkgs(): List<String> {
-        val raw = settings.earphoneMusicPkgs
-        if (raw.isEmpty()) return emptyList<String>()
-        return raw.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
-    }
-
     // ---------- 应用安装 ----------
 
 

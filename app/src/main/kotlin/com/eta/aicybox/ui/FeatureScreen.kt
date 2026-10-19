@@ -107,12 +107,8 @@ internal fun FeatureScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     // @author bomo 2026-10-20 用户要求：建议页里点气泡开关给一下震动反馈。
-    val hapticHost = androidx.compose.ui.platform.LocalView.current
-    fun tapped(change: (Boolean) -> Unit): (Boolean) -> Unit = { value ->
-        // 0.3.10：用户要 80% 震动，CONTEXT_CLICK 在部分场景几乎无感 → 直接给 amplitude 80
-        com.eta.aicybox.sideindex.util.Haptics.tick(context, 80, hapticHost)
-        change(value)
-    }
+    // @author bomo 2026-10-21 用户取消：建议页气泡开关点击原本有震动反馈，现去掉。
+    fun tapped(change: (Boolean) -> Unit): (Boolean) -> Unit = { value -> change(value) }
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberTopBarBackdrop()
     val topBarColor = topBarContainerColor(backdrop)

@@ -130,8 +130,8 @@ internal object ModulePreferences {
      * 早前默认「不执行」会让双击小横条看起来像功能失效，故默认恢复为可用状态。
      */
     val DEFAULT_OUTSIDE_TAP_CLOSE_MODE = OutsideTapCloseMode.Disabled
-    /** @author bomo 2026-10-20 改回 true：同上，上滑小横条呼小窗也是入口。 */
-    const val DEFAULT_HANDLE_SWIPE_UP_TO_MINI_ENABLED = true
+    /** @author bomo 2026-10-21 用户要求默认关：上滑小横条切换迷你小窗默认关闭。 */
+    const val DEFAULT_HANDLE_SWIPE_UP_TO_MINI_ENABLED = false
     /** @author bomo 2026-10-19 所有开关默认关闭。 */
     const val DEFAULT_PAUSE_IN_LANDSCAPE = false
     /** @author bomo 2026-10-19 所有开关默认关闭。 */
