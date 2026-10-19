@@ -76,10 +76,7 @@ internal fun loadPickerApps(
     return apps
         .mapNotNull { info ->
             if (info.packageName !in includePackages) {
-                val system =
-                    (info.flags and
-                        (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-                if (system) return@mapNotNull null
+                if (isSystemApp(info)) return@mapNotNull null
                 val launchable =
                     runCatching { pm.getLaunchIntentForPackage(info.packageName) }.getOrNull() != null
                 if (!launchable) return@mapNotNull null
@@ -90,6 +87,22 @@ internal fun loadPickerApps(
             PickerApp(info.packageName, label, runCatching { appIcon(pm.getApplicationIcon(info), iconSize) }.getOrNull())
         }
         .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+}
+
+/**
+ * 0.3.10：判断系统/预装应用。
+ *
+ * 只看 flags 不够：ColorOS 的 `com.coloros.*`、`com.oplus.*` 预装应用（例如「AI 拍一拍」
+ * `com.coloros.ocrscanner`）既没有 `FLAG_SYSTEM` 也没有 `FLAG_UPDATED_SYSTEM_APP`，却装在
+ * `/my_product`、`/product`、`/system_ext` 这些只读分区里。用户自己装的应用一定在 `/data/` 下，
+ * 所以「APK 不在 /data/ 就算系统应用」最稳。
+ */
+private fun isSystemApp(info: ApplicationInfo): Boolean {
+    val flagged =
+        (info.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+    if (flagged) return true
+    val dir = info.sourceDir ?: return false
+    return !dir.startsWith("/data/")
 }
 
 private fun appIcon(drawable: Drawable, size: Int): ImageBitmap {
