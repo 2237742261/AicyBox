@@ -108,8 +108,8 @@ data class ModuleConfig(
     /** 可见字母条（= 触发高度）占屏幕高度百分比（越小越省力）：默认 45%（1.32.0 起） */
     val barHeightPercent: Int = 45,
     val vibrateEnabled: Boolean = false,
-    /** 震动强度 0-100：0 = 完全不震动（替代原来的"启用震动"开关） */
-    val vibrateStrength: Int = 0,
+    /** 震动强度 10-100（0 仅用于兼容旧配置）；开关打开才震 */
+    val vibrateStrength: Int = 70,
     val vibratePerGroup: Boolean = false,
     /** 用小窗（ColorOS 弹性窗口）打开应用（默认关） */
     val freeformLaunch: Boolean = true,
@@ -129,8 +129,8 @@ data class ModuleConfig(
     val source: String = "default"
 ) {
 
-    /** 强度大于 0 才震动 */
-    fun vibrateOn(): Boolean = vibrateStrength > 0
+    /** 0.3.10 修：以前只看强度，关掉「字母震动」开关照样震；现在开关与强度都要满足 */
+    fun vibrateOn(): Boolean = vibrateEnabled && vibrateStrength > 0
 
     /** 右侧要不要挂感应带（triggerSide = right / both） */
     fun onRight(): Boolean = triggerSide != "left"
@@ -198,14 +198,14 @@ data class ModuleConfig(
                 barHeightPercent = src.getInt(PrefKeys.BAR_HEIGHT_PERCENT, 45).coerceIn(20, 100),
 
                 vibrateEnabled = src.getBoolean(PrefKeys.VIBRATE_ENABLED, false),
-                vibrateStrength = src.getInt(PrefKeys.VIBRATE_STRENGTH, 0).coerceIn(0, 100),
+                vibrateStrength = src.getInt(PrefKeys.VIBRATE_STRENGTH, 70).coerceIn(0, 100),
                 vibratePerGroup = src.getBoolean(PrefKeys.VIBRATE_PER_GROUP, false),
-                freeformLaunch = src.getBoolean(PrefKeys.FREEFORM_LAUNCH, false),
+                freeformLaunch = src.getBoolean(PrefKeys.FREEFORM_LAUNCH, true),
                 iconSizeDp = FIXED_ICON_SIZE_DP,
                 gridColumns = src.getInt(PrefKeys.GRID_COLUMNS, 5).coerceIn(4, 5),
                 immersive = src.getBoolean(PrefKeys.IMMERSIVE, false),
-                gameBlock = src.getBoolean(PrefKeys.GAME_BLOCK, false),
-                landscapePause = src.getBoolean(PrefKeys.LANDSCAPE_PAUSE, false),
+                gameBlock = src.getBoolean(PrefKeys.GAME_BLOCK, true),
+                landscapePause = src.getBoolean(PrefKeys.LANDSCAPE_PAUSE, true),
                 blacklist = src.getString(PrefKeys.BLACKLIST, "")?.trim() ?: "",
                 logVerbose = src.getBoolean(PrefKeys.LOG_VERBOSE, false),
                 reloadIntervalMs = src.getInt(PrefKeys.RELOAD_INTERVAL_MS, 1200).coerceIn(300, 10_000),

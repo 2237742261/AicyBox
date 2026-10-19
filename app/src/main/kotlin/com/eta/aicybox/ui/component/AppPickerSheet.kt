@@ -50,7 +50,16 @@ internal data class PickerApp(
     val icon: ImageBitmap?,
 )
 
-/** 读取本机已安装的用户应用（过滤系统应用），按名称排序；图标顺手栅格化成 44dp 位图。 */
+/**
+ * 读取本机已安装的用户应用，按名称排序；图标顺手栅格化成 44dp 位图。
+ *
+ * 0.3.10：系统应用彻底过滤（`FLAG_SYSTEM` 之外再算上 `FLAG_UPDATED_SYSTEM_APP`——ColorOS 的
+ * 预装应用被更新过之后只置后一个标志），并且要求「有启动入口」（没有 launcher intent 的
+ * 服务/插件列在黑名单里没有意义）。
+ *
+ * @param includePackages 已经在名单里的包名：即使算系统应用 / 没有启动入口也照样列出，
+ *   否则用户在这里取消不了它。
+ */
 internal fun loadPickerApps(
     context: Context,
     includePackages: Collection<String> = emptyList(),
@@ -66,9 +75,15 @@ internal fun loadPickerApps(
         }
     return apps
         .mapNotNull { info ->
-            val system = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            // 系统应用默认不列，但已经在名单里的要保留，否则用户没法在这里取消它
-            if (system && info.packageName !in includePackages) return@mapNotNull null
+            if (info.packageName !in includePackages) {
+                val system =
+                    (info.flags and
+                        (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                if (system) return@mapNotNull null
+                val launchable =
+                    runCatching { pm.getLaunchIntentForPackage(info.packageName) }.getOrNull() != null
+                if (!launchable) return@mapNotNull null
+            }
             val label =
                 runCatching { pm.getApplicationLabel(info).toString() }.getOrNull()
                     ?: return@mapNotNull null

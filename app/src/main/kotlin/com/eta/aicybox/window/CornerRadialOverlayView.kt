@@ -918,8 +918,11 @@ internal class CornerRadialOverlayView(
         selectedIndexState.intValue = next ?: NO_SELECTION
         val now = SystemClock.uptimeMillis()
         if (next != null && now - lastTickUptime >= TICK_INTERVAL_MS) {
-            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-            tickVibrate()
+            // 0.3.10：performHapticFeedback 原来无条件调用，关掉开关仍然有触感 → 一并门控
+            if (vibrateEnabled) {
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                tickVibrate()
+            }
             lastTickUptime = now
         }
     }

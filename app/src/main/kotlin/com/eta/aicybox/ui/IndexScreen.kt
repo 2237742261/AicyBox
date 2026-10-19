@@ -282,7 +282,7 @@ internal fun IndexScreen(
                                         it.putBoolean(PrefKeys.VIBRATE_ENABLED, value)
                                         // 刚打开而强度还是 0 时给个能感觉到的基础值，否则「开了没反应」
                                         if (value && config.vibrateStrength <= 0) {
-                                            it.putInt(PrefKeys.VIBRATE_STRENGTH, 40)
+                                            it.putInt(PrefKeys.VIBRATE_STRENGTH, 70)
                                         }
                                     }
                                 },
@@ -297,7 +297,7 @@ internal fun IndexScreen(
                                     title = stringResource(R.string.index_vibrate_strength_title),
                                     summary = stringResource(R.string.index_vibrate_strength_summary),
                                     value = config.vibrateStrength,
-                                    minValue = 0,
+                                    minValue = 10,
                                     maxValue = 100,
                                     unitRes = R.string.index_value_percent,
                                     enabled = config.enabled,

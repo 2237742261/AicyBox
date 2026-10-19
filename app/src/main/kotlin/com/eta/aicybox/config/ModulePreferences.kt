@@ -114,7 +114,7 @@ internal object ModulePreferences {
     const val KEY_RADIAL_VIBRATE_ENABLED = "radial_vibrate_enabled_v1"
     const val DEFAULT_RADIAL_VIBRATE_ENABLED = false
     const val KEY_RADIAL_VIBRATE_STRENGTH = "radial_vibrate_strength_v1"
-    const val DEFAULT_RADIAL_VIBRATE_STRENGTH = 60
+    const val DEFAULT_RADIAL_VIBRATE_STRENGTH = 70
     const val MIN_RADIAL_VIBRATE_STRENGTH = 10
     const val MAX_RADIAL_VIBRATE_STRENGTH = 100
 

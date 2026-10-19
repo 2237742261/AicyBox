@@ -109,9 +109,8 @@ internal fun FeatureScreen(
     // @author bomo 2026-10-20 用户要求：建议页里点气泡开关给一下震动反馈。
     val hapticHost = androidx.compose.ui.platform.LocalView.current
     fun tapped(change: (Boolean) -> Unit): (Boolean) -> Unit = { value ->
-        runCatching {
-            hapticHost.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
-        }
+        // 0.3.10：用户要 80% 震动，CONTEXT_CLICK 在部分场景几乎无感 → 直接给 amplitude 80
+        com.eta.aicybox.sideindex.util.Haptics.tick(context, 80, hapticHost)
         change(value)
     }
     val scrollBehavior = MiuixScrollBehavior()
