@@ -91,7 +91,6 @@ internal fun FeatureScreen(
     linkEnabled: Boolean,
     shareEnabled: Boolean,
     browserEnabled: Boolean,
-    browserPkg: String,
     onAicyEnabledChange: (Boolean) -> Unit,
     onFlashlightEnabledChange: (Boolean) -> Unit,
     onKeepAwakeEnabledChange: (Boolean) -> Unit,
@@ -103,7 +102,6 @@ internal fun FeatureScreen(
     onLinkEnabledChange: (Boolean) -> Unit,
     onShareEnabledChange: (Boolean) -> Unit,
     onBrowserEnabledChange: (Boolean) -> Unit,
-    onBrowserPkgChange: (String) -> Unit,
     bubblePosXDp: Int,
     bubblePosYDp: Int,
     onBubblePosChange: (Int, Int) -> Unit,
@@ -256,11 +254,6 @@ internal fun FeatureScreen(
                                 summary = stringResource(R.string.share_bubble_summary),
                                 enabled = aicyEnabled,
                                 startAction = { PreferenceIcon(Icons.Rounded.Link, aicyEnabled) },
-                            )
-                            BrowserSelector(
-                                selectedPkg = browserPkg,
-                                onSelectedChange = onBrowserPkgChange,
-                                enabled = aicyEnabled && linkEnabled,
                             )
                         }
                     }
@@ -419,42 +412,4 @@ private fun launchBubblePosEdit(context: android.content.Context) {
         context.startActivity(i)
     } catch (_: Exception) {
     }
-}
-
-/** @author bomo 2026-10-22：链接气泡落地浏览器选择器（默认系统默认浏览器，可另选已装浏览器）。 */
-@Composable
-private fun BrowserSelector(
-    selectedPkg: String,
-    onSelectedChange: (String) -> Unit,
-    enabled: Boolean,
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    val defaultLabel = stringResource(R.string.browser_selector_default)
-    val customLabel = stringResource(R.string.browser_selector_title)
-    // 已装浏览器（能处理 http:// 的 view intent）
-    val browsers = remember(context) {
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("http://example.com"))
-        context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-            .map { it.activityInfo.packageName }
-            .distinct()
-    }
-    // 选项：默认浏览器 + 已装浏览器清单
-    val labels = remember(context, browsers, defaultLabel) {
-        buildList {
-            add(defaultLabel)
-            for (pkg in browsers) add(appLabel(context, pkg) ?: pkg)
-        }
-    }
-    val selIndex = if (selectedPkg.isEmpty()) 0 else (browsers.indexOf(selectedPkg) + 1).takeIf { it > 0 } ?: 0
-    OverlaySpinnerPreference(
-        items = labels.map { DropdownItem(text = it) },
-        selectedIndex = selIndex,
-        title = customLabel,
-        summary = if (selectedPkg.isEmpty()) defaultLabel else (appLabel(context, selectedPkg) ?: selectedPkg),
-        enabled = enabled,
-        startAction = { PreferenceIcon(Icons.Rounded.Public, enabled) },
-        onSelectedIndexChange = { index ->
-            if (index == 0) onSelectedChange("") else onSelectedChange(browsers[index - 1])
-        },
-    )
 }

@@ -1829,8 +1829,8 @@ internal class ColorOsFreeformCoordinator(
         /** @author bomo 切换支付方式时，等旧小窗收完再启动新页面的延迟。 */
         const val PAY_SWITCH_DELAY_MS = 250L
 
-        /** @author bomo 连点防抖窗口：支付栏点击 1 秒内只响应一次。 */
-        const val PAY_SWITCH_BLOCK_MS = 1000L
+        /** @author bomo 连点防抖窗口：支付栏切换过快会出问题，2.5 秒内只响应一次。 */
+        const val PAY_SWITCH_BLOCK_MS = 2500L
 
         /** @author bomo 连续多少拍读不到小窗才认为小窗真的关了（40ms 一拍 → 120ms）。 */
         const val PAY_BAR_MISSING_TICKS = 3

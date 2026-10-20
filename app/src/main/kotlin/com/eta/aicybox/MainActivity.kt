@@ -59,7 +59,6 @@ class MainActivity : ComponentActivity() {
                     onLinkBubbleChange = repository::setLinkBubbleEnabled,
                     onShareBubbleChange = repository::setShareBubbleEnabled,
                     onBrowserBubbleChange = repository::setBrowserBubbleEnabled,
-                    onBrowserPkgChange = repository::setBrowserPkg,
                     onBubblePosChange = repository::setBubblePos,
                     onRequestScopes = repository::requestMissingScopes,
                     onRestartScope = repository::restartScope,

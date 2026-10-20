@@ -26,9 +26,6 @@
     <string name="share_bubble_summary">识别到 B站、抖音、淘宝、微博等平台分享链接时，显示对应气泡</string>
     <string name="browser_bubble_title">浏览器跳应用</string>
     <string name="browser_bubble_summary">访问网页触发「去应用中打开」时，显示对应应用气泡</string>
-    <string name="browser_selector_title">浏览器</string>
-    <string name="browser_selector_default">默认浏览器</string>
-    <string name="browser_selector_summary">链接气泡落地用哪个浏览器打开（默认系统默认浏览器）</string>
     <string name="bubble_pos_edit_title">调节气泡位置</string>
     <string name="bubble_pos_edit_summary">在屏幕上拖动气泡到目标位置，确认后生效</string>
     <string name="bubble_pos_x_title">气泡横向位置</string>

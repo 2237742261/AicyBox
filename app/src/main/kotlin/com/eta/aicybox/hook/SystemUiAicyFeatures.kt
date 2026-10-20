@@ -521,16 +521,6 @@ internal class SystemUiAicyFeatures(
     }
 
     private fun resolveBrowser(): String? {
-        // @author bomo 2026-10-22 优先用用户在建议页「浏览器」里选的包名；配了但没装/异常则退回系统默认。
-        val configured = settings.browserPkg.trim()
-        if (configured.isNotEmpty()) {
-            try {
-                val pi = context.packageManager.getPackageInfo(configured, 0)
-                if (pi.applicationInfo?.enabled == true) return configured
-            } catch (_: Exception) {
-                // 未安装，走默认
-            }
-        }
         val pm = context.packageManager
         val intent =
             android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("http://example.com"))
