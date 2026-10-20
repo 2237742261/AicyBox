@@ -80,6 +80,8 @@ internal class SystemUiBubbleMonitor(
         val icon: Drawable,
         val onClick: () -> Unit,
         val autoDismissMs: Long,
+        /** @author bomo 2026-10-22(用户要求)：气泡归属应用（QQ / 微信）。非空时，该应用一进入前台就收掉气泡。 */
+        val ownerPackage: String? = null,
     )
 
     private enum class BubbleLayer { TEMP, BASE }
@@ -270,11 +272,125 @@ internal class SystemUiBubbleMonitor(
         }
     }
 
+    // ---------- 消息气泡（QQ / 微信）：进入归属应用即消失 ----------
+
+    // @author bomo 2026-10-22(用户要求)：来 QQ/微信消息时左下角弹气泡；用户从这个应用进去（点通知或点图标）
+    // 之后气泡就没意义了 —— 盯前台顶层任务，一旦是归属应用立刻收掉，不用等 autoDismiss。
+    private var msgWatchOwner: String? = null
+
+    // 前台检测要 exec dumpsys，放独立线程跑，别在 SystemUI 主线程上抖动画
+    private var msgWatchHandler: Handler? = null
+
+    private val msgWatchRunnable =
+        object : Runnable {
+            override fun run() {
+                val owner = msgWatchOwner ?: return
+                val top = currentTopTaskPackage()
+                if (top != null && top == owner) {
+                    module.logFiltered(Log.DEBUG, TAG, "MSG_BUBBLE_ENTER_APP $owner -> HIDE")
+                    hideMsgBubble(owner)
+                    return
+                }
+                msgWatchHandler?.postDelayed(this, MSG_WATCH_INTERVAL_MS)
+            }
+        }
+
+    private fun ensureMsgWatchHandler(): Handler {
+        msgWatchHandler?.let { return it }
+        val thread = android.os.HandlerThread("aicy-msg-watch")
+        thread.start()
+        return Handler(thread.looper).also { msgWatchHandler = it }
+    }
+
+    private fun startMsgWatch(owner: String) {
+        msgWatchOwner = owner
+        val handler = ensureMsgWatchHandler()
+        handler.removeCallbacks(msgWatchRunnable)
+        handler.postDelayed(msgWatchRunnable, MSG_WATCH_INTERVAL_MS)
+    }
+
+    private fun stopMsgWatch() {
+        msgWatchOwner = null
+        msgWatchHandler?.removeCallbacks(msgWatchRunnable)
+    }
+
+    /**
+     * @author bomo 2026-10-22(用户要求)：收掉归属该应用的消息气泡。
+     *
+     * 两路触发：① 前台顶层任务变成该应用（msgWatchRunnable）；② 该应用的通知被移除（点通知进去时
+     * 通知会 cancel，由 onMsgNotificationRemoved 调进来）。
+     */
+    internal fun hideMsgBubble(owner: String) {
+        mainHandler.post {
+            tempQueue.removeAll { it.ownerPackage == owner }
+            val shown = activeTemp
+            if (shown != null && shown.ownerPackage == owner) {
+                module.logFiltered(Log.DEBUG, TAG, "MSG_BUBBLE_DISMISS owner=$owner")
+                finishTempBubble()
+            } else if (msgWatchOwner == owner) {
+                stopMsgWatch()
+            }
+        }
+    }
+
+    /** @author bomo 2026-10-22：通知被移除（点击 / 清掉）→ 归属该应用的消息气泡一起收。 */
+    internal fun onMsgNotificationRemoved(pkg: String) {
+        mainHandler.post {
+            tempQueue.removeAll { it.ownerPackage == pkg }
+            val shown = activeTemp
+            if (shown != null && shown.ownerPackage == pkg) {
+                module.logFiltered(Log.DEBUG, TAG, "MSG_BUBBLE_NOTIFY_REMOVED $pkg -> HIDE")
+                finishTempBubble()
+            }
+        }
+    }
+
+    /**
+     * @author bomo 2026-10-22：当前顶层任务包名（读 dumpsys activity activities 开头，取第一个 Task）。
+     *
+     * 与 AicyFeatures.foregroundApp() 的区别：这里不做「全屏 bounds」判定 —— 小窗打开聊天也算进入应用；
+     * 只在消息气泡存活的那几秒里每 700ms 调一次，读到第一个 Task 就断开，开销可控。
+     */
+    private fun currentTopTaskPackage(): String? {
+        var process: Process? = null
+        return try {
+            process = Runtime.getRuntime().exec(arrayOf("/system/bin/dumpsys", "activity", "activities"))
+            val reader = java.io.BufferedReader(java.io.InputStreamReader(process.inputStream))
+            var result: String? = null
+            var read = 0
+            while (read < 400) {
+                val line = reader.readLine() ?: break
+                read++
+                if (line.length > 4000) continue
+                if (!line.trim().startsWith("* Task{")) continue
+                val aIdx = line.indexOf(" A=")
+                if (aIdx >= 0) {
+                    var part = line.substring(aIdx + 3)
+                    val colon = part.indexOf(':')
+                    if (colon >= 0) part = part.substring(colon + 1)
+                    result = part.trim().substringBefore(' ').substringBefore('}')
+                }
+                break
+            }
+            runCatching { reader.close() }
+            result
+        } catch (_: Throwable) {
+            null
+        } finally {
+            runCatching { process?.destroy() }
+        }
+    }
+
     // ---------- 气泡窗口 ----------
 
-    internal fun showBubble(icon: Drawable, onClick: () -> Unit, autoDismissMs: Long = 0L) {
+    internal fun showBubble(
+        icon: Drawable,
+        onClick: () -> Unit,
+        autoDismissMs: Long = 0L,
+        ownerPackage: String? = null,
+    ) {
         mainHandler.post {
-            val request = BubbleRequest(icon, onClick, autoDismissMs)
+            val request = BubbleRequest(icon, onClick, autoDismissMs, ownerPackage)
             if (autoDismissMs <= 0L) {
                 // @author bomo 2026-10-19 常驻气泡（手电筒）：只占「底层」。
                 // 正在展示临时气泡时不抢占，等它满后退场再把手电筒图标放回来
@@ -295,8 +411,13 @@ internal class SystemUiBubbleMonitor(
     }
 
     /** @author bomo 带自动消失的气泡（链接/安装/常亮等临时提示用）。 */
-    internal fun showBubbleTemporary(icon: Drawable, onClick: () -> Unit, autoDismissMs: Long) {
-        showBubble(icon, onClick, autoDismissMs)
+    internal fun showBubbleTemporary(
+        icon: Drawable,
+        onClick: () -> Unit,
+        autoDismissMs: Long,
+        ownerPackage: String? = null,
+    ) {
+        showBubble(icon, onClick, autoDismissMs, ownerPackage)
     }
 
     /**
@@ -315,9 +436,21 @@ internal class SystemUiBubbleMonitor(
         }
         removeAutoDismiss()
         shownLayer = layer
-        onClick = request.onClick
+        // @author bomo 2026-10-22(用户要求)：点消息气泡本身就是进聊天 -> 先收气泡再启动小窗。
+        onClick =
+            if (request.ownerPackage != null) {
+                {
+                    stopMsgWatch()
+                    runCatching { request.onClick.invoke() }
+                    if (shownLayer == BubbleLayer.TEMP) finishTempBubble()
+                }
+            } else {
+                request.onClick
+            }
         if (layer == BubbleLayer.TEMP) {
             activeTemp = request
+            // 消息气泡：盯住归属应用，它一进前台就收掉（不用等自动消失）
+            if (request.ownerPackage != null) startMsgWatch(request.ownerPackage) else stopMsgWatch()
             if (request.autoDismissMs > 0L) {
                 val runnable = Runnable { finishTempBubble() }
                 autoDismissRunnable = runnable
@@ -413,6 +546,7 @@ internal class SystemUiBubbleMonitor(
 
     /** 临时气泡到点：先放队列里的下一条，没有就恢复手电筒，再没有才真收窗口。 */
     private fun finishTempBubble() {
+        stopMsgWatch()
         removeAutoDismiss()
         activeTemp = null
         val next = tempQueue.removeFirstOrNull()
@@ -439,6 +573,7 @@ internal class SystemUiBubbleMonitor(
     }
 
     private fun removeBubbleWindow() {
+        stopMsgWatch()
         shownLayer = null
         onClick = null
         val v = bubbleView ?: return
@@ -544,6 +679,9 @@ private fun circleColor(color: Int): Drawable {
 
         /** @author bomo 2026-10-19 临时气泡排队上限（超出丢最旧的），防止刷屏式连发。 */
         const val BUBBLE_QUEUE_MAX = 3
+
+        /** @author bomo 2026-10-22 消息气泡的前台检测间隔（ms）：进 QQ/微信后要"立刻"消失，700ms 内收掉。 */
+        const val MSG_WATCH_INTERVAL_MS = 700L
         const val BUBBLE_MARGIN_DP = 16
         /** @author bomo 滑动判定阈值（dp）：超过才是滑动（2026-10-18 用户要求加大，杜绝轻滑误判）。 */
         const val SWIPE_THRESHOLD_DP = 18f

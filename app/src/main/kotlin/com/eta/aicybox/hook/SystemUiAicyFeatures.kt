@@ -231,6 +231,8 @@ internal class SystemUiAicyFeatures(
                 launchPendingIntentFreeform(contentIntent)
             },
             autoDismissMs = 6000L,
+            // @author bomo 2026-10-22(用户要求)：标签这个气泡属于哪个应用 —— 用户从 QQ/微信进去后气泡立即消失
+            ownerPackage = targetPkg,
         )
         module.logFiltered(Log.DEBUG, TAG, "${logTag}_NOTIFY_BUBBLE title=$title avatar=${avatar != null}")
     }

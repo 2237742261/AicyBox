@@ -46,6 +46,53 @@ internal class SystemUiHookInstaller(
             module.logFiltered(Log.WARN, TAG, "SYSTEMUI_APPLICATION_TARGET_LINKAGE_FAILED", exception)
         }
         installQqNotificationHook(classLoader)
+        installNotificationRemovedHook(classLoader)
+    }
+
+    /**
+     * @author bomo 2026-10-22(用户要求)：QQ/微信通知被点掉（点了通知进聊天，通知会 cancel）→
+     * 一并把左下角那条消息气泡收掉，不等它 6 秒自动消失。
+     *
+     * SystemUI 的通知监听类可能把 onNotificationRemoved 声明在父类里，所以沿类层次找。
+     */
+    private fun installNotificationRemovedHook(classLoader: ClassLoader) {
+        try {
+            val listenerClass = classLoader.loadClass(QQ_NOTIFICATION_LISTENER_CLASS)
+            val methods = linkedMapOf<String, java.lang.reflect.Method>()
+            var cls: Class<*>? = listenerClass
+            while (cls != null && cls != Any::class.java) {
+                for (method in cls.declaredMethods) {
+                    if (method.name != "onNotificationRemoved") continue
+                    val key = method.toGenericString()
+                    methods.putIfAbsent(key, method)
+                }
+                cls = cls.superclass
+            }
+            var hooked = 0
+            for (method in methods.values) {
+                module
+                    .hook(method)
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .setId("flymefreeform.systemui.msg_removed_$hooked")
+                    .intercept { chain ->
+                        val result = chain.proceed()
+                        try {
+                            val sbn =
+                                runCatching {
+                                    chain.getArg(0) as? android.service.notification.StatusBarNotification
+                                }.getOrNull()
+                            val pkg = runCatching { sbn?.packageName }.getOrNull()
+                            if (!pkg.isNullOrBlank()) bubbleMonitor?.onMsgNotificationRemoved(pkg)
+                        } catch (_: Throwable) {
+                        }
+                        result
+                    }
+                hooked++
+            }
+            module.logFiltered(Log.INFO, TAG, "SYSTEMUI_NOTIFY_REMOVED_HOOK_INSTALLED count=$hooked")
+        } catch (exception: Throwable) {
+            module.logFiltered(Log.WARN, TAG, "SYSTEMUI_NOTIFY_REMOVED_HOOK_FAIL", exception)
+        }
     }
 
     /** @author bomo 2026-10-19：hook SystemUI 自带 NotificationListener，拿 QQ 通知弹气泡（免授权）。 */
