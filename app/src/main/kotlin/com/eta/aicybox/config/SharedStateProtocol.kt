@@ -30,11 +30,6 @@ internal object SharedStateProtocol {
     /** @author bomo 屏幕常亮触发：system_server 检测到"半暗中点亮屏幕"后广播，SystemUI 收到弹常亮气泡。 */
     const val ACTION_KEEP_AWAKE_TRIGGER = "com.eta.aicybox.action.KEEP_AWAKE_TRIGGER"
 
-    // @author bomo 2026-10-19：QQ 消息提醒（需求2）。App 的 NotificationListenerService → SystemUI 弹气泡。
-    const val ACTION_QQ_NOTIFY = "com.eta.aicybox.action.QQ_NOTIFY"
-    const val EXTRA_QQ_TITLE = "qq_title"
-    const val EXTRA_QQ_PENDING_INTENT = "qq_pending_intent"
-
     /**
      * App 主动向 system_server 索要工具目录。
      * 被动等中继会被 ColorOS 的启动延迟策略拖住（实测 BootPressureHolder delay start），

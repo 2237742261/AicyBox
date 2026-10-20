@@ -54,7 +54,6 @@ internal class SystemUiAicyFeatures(
     private var clipRegistered = false
 
     // ---------- QQ 消息提醒（需求2，2026-10-19）：App 的 NotificationListenerService 广播 → 弹气泡 ----------
-    private var qqNotifyRegistered = false
 
     // ---------- 屏幕常亮：Pano 式 dumpsys display 轮询（2026-10-18 替换 system_server hook） ----------
     // Pano 思路：在宿主进程内轮询 `dumpsys display` 的 mScreenState，检测到「压暗(DIM)」即弹气泡，

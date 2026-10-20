@@ -89,16 +89,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- @author bomo 2026-10-19：QQ 消息通知监听（需求2：来消息弹气泡跳聊天框）。不 hook QQ，用系统通知接口。 -->
-        <service
-            android:name=".framework.QqNotificationListener"
-            android:label="Frash Box 消息提醒"
-            android:exported="false"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
     </application>
 
 </manifest>
