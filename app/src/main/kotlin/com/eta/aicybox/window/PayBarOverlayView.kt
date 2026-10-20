@@ -144,14 +144,21 @@ internal class PayBarOverlayView(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                pressedIndex = indexAt(event.x)
+                val idx = indexAt(event.x)
+                // @author bomo 2026-10-22 当前选中的支付方式按钮不可点击：点自己没意义，
+                // DOWN 直接返回 false（不吃触摸），避免重复触达已选渠道。
+                if (idx >= 0 && idx == selectedIndex) {
+                    pressedIndex = -1
+                    return false
+                }
+                pressedIndex = idx
                 return pressedIndex >= 0
             }
             MotionEvent.ACTION_UP -> {
                 val index = indexAt(event.x)
                 val hit = pressedIndex
                 pressedIndex = -1
-                if (index >= 0 && index == hit) {
+                if (index >= 0 && index == hit && index != selectedIndex) {
                     selectedIndex = index
                     invalidate()
                     onSelected(items[index].channel)

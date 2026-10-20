@@ -62,6 +62,10 @@ internal object ModulePreferences {
     const val KEY_BROWSER_BUBBLE_ENABLED = "browser_bubble_enabled"
     const val DEFAULT_BROWSER_BUBBLE_ENABLED = false
 
+    /** @author bomo 链接识别落地浏览器包名（空 = 用系统默认浏览器）。 */
+    const val KEY_BROWSER_PKG = "browser_pkg"
+    const val DEFAULT_BROWSER_PKG = ""
+
     /** @author bomo 气泡位置（dp，相对屏幕左下角），参考欧泡 oupao_bub_pos。 */
     const val KEY_BUBBLE_POS_X_DP = "bubble_pos_x_dp"
     const val DEFAULT_BUBBLE_POS_X_DP = 12

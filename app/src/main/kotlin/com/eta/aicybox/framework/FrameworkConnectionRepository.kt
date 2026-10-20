@@ -216,6 +216,10 @@ internal class FrameworkConnectionRepository(
     fun setBrowserBubbleEnabled(enabled: Boolean) =
         updateSettings { it.copy(browserBubbleEnabled = enabled) }
 
+    /** @author bomo 链接识别落地浏览器包名（空 = 系统默认浏览器）。 */
+    fun setBrowserPkg(pkg: String) =
+        updateSettings { it.copy(browserPkg = pkg) }
+
     /** @author bomo 气泡位置（dp，相对屏幕左下角）。 */
     fun setBubblePos(xDp: Int, yDp: Int) =
         updateSettings { s ->

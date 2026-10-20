@@ -170,6 +170,9 @@ internal class ColorOsFreeformCoordinator(
     private var paySwitchBaseActivity: String? = null
     private var payBarSwitchLandAt = 0L
 
+    /** @author bomo 连续/过快点击支付栏时，1 秒内只响应一次切换（防连点导致多次关窗/开窗叠加出问题）。 */
+    private var payBarSwitchBlockedUntil = 0L
+
     /** @author bomo 0.2.71 小窗被别的界面盖住了（支付宝指纹校验页等）→ 支付栏也一起藏起来。 */
     private var payBarCovered = false
 
@@ -651,8 +654,16 @@ internal class ColorOsFreeformCoordinator(
      * [PAY_SWITCH_DELAY_MS] 再启动；关不掉就直接开（宁可叠一个也别点了没反应）。
      */
     private fun switchPay(channel: PayChannel) {
-        payBarView?.select(payBarOrder.indexOf(channel))
         val now = SystemClock.uptimeMillis()
+        // @author bomo 连点防抖：1 秒内只响应一次切换，避免快速/频繁点击触发多次
+        // closeTopTask + startPay（关窗异步，连点会叠出脏状态，如多次关/开小窗、轮盘状态错乱）。
+        if (now < payBarSwitchBlockedUntil) {
+            logger(Log.DEBUG, "PAY_SWITCH_BLOCKED ${channel.storedValue} remain=${
+                (payBarSwitchBlockedUntil - now)}ms", null)
+            return
+        }
+        payBarSwitchBlockedUntil = now + PAY_SWITCH_BLOCK_MS
+        payBarView?.select(payBarOrder.indexOf(channel))
         // 旧窗要关、新窗还没出来，这段时间「没有小窗」是正常的，不许收栏。
         // 0.2.59 的坑：一点就 PAY_BAR_HIDDEN，于是新支付方式的小窗下方再也长不出支付栏。
         payBarSwitchUntil = now + PAY_BAR_SWITCH_GRACE_MS
@@ -1243,7 +1254,7 @@ internal class ColorOsFreeformCoordinator(
         val metrics = context.resources.displayMetrics
         val barWidth = (bounds?.width() ?: metrics.widthPixels).coerceAtLeast(1)
         val barHeight = (barWidth * PAY_BAR_HEIGHT_RATIO).toInt().coerceAtLeast(1)
-        return WindowManager.LayoutParams(
+        val params = WindowManager.LayoutParams(
             barWidth,
             barHeight,
             OVERLAY_WINDOW_TYPE,
@@ -1255,10 +1266,24 @@ internal class ColorOsFreeformCoordinator(
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = bounds?.left ?: ((metrics.widthPixels - barWidth) / 2)
-            y = bounds?.bottom ?: (metrics.heightPixels - barHeight)
+            // @author bomo 首挂位置与 applyPayBarGeometry 完全一致（含 clamp + gap + 贴底判断），
+            // 否则首帧 addView 在 bounds.bottom 无 gap 处，下一拍 updateViewLayout 又加 gap，
+            // 栏首现时往下「哆嗦」了一下（用户反馈）。
+            if (bounds != null) {
+                x = bounds.left.coerceIn(0, (metrics.widthPixels - barWidth).coerceAtLeast(0))
+                val gap = (PAY_BAR_GAP_DP * metrics.density).toInt().coerceAtLeast(1)
+                var y = bounds.bottom + gap
+                if (y + barHeight > metrics.heightPixels) {
+                    y = bounds.bottom - gap - barHeight
+                }
+                y = y.coerceIn(0, (metrics.heightPixels - barHeight).coerceAtLeast(0))
+            } else {
+                y = metrics.heightPixels - barHeight
+            }
             setFitInsetsTypes(0)
             title = "FlymeFreeformPayBar"
         }
+        return params
     }
 
     /**
@@ -1803,6 +1828,9 @@ internal class ColorOsFreeformCoordinator(
 
         /** @author bomo 切换支付方式时，等旧小窗收完再启动新页面的延迟。 */
         const val PAY_SWITCH_DELAY_MS = 250L
+
+        /** @author bomo 连点防抖窗口：支付栏点击 1 秒内只响应一次。 */
+        const val PAY_SWITCH_BLOCK_MS = 1000L
 
         /** @author bomo 连续多少拍读不到小窗才认为小窗真的关了（40ms 一拍 → 120ms）。 */
         const val PAY_BAR_MISSING_TICKS = 3

@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -90,6 +91,7 @@ internal fun FeatureScreen(
     linkEnabled: Boolean,
     shareEnabled: Boolean,
     browserEnabled: Boolean,
+    browserPkg: String,
     onAicyEnabledChange: (Boolean) -> Unit,
     onFlashlightEnabledChange: (Boolean) -> Unit,
     onKeepAwakeEnabledChange: (Boolean) -> Unit,
@@ -101,6 +103,7 @@ internal fun FeatureScreen(
     onLinkEnabledChange: (Boolean) -> Unit,
     onShareEnabledChange: (Boolean) -> Unit,
     onBrowserEnabledChange: (Boolean) -> Unit,
+    onBrowserPkgChange: (String) -> Unit,
     bubblePosXDp: Int,
     bubblePosYDp: Int,
     onBubblePosChange: (Int, Int) -> Unit,
@@ -254,6 +257,11 @@ internal fun FeatureScreen(
                                 enabled = aicyEnabled,
                                 startAction = { PreferenceIcon(Icons.Rounded.Link, aicyEnabled) },
                             )
+                            BrowserSelector(
+                                selectedPkg = browserPkg,
+                                onSelectedChange = onBrowserPkgChange,
+                                enabled = aicyEnabled && linkEnabled,
+                            )
                         }
                     }
                     item(key = "bubble_pos_edit") {
@@ -314,24 +322,40 @@ private fun EarphoneMusicSelector(
     val noneLabel = stringResource(R.string.earphone_music_none_summary)
     val customLabel = stringResource(R.string.earphone_music_custom_label)
     val pickerTitle = stringResource(R.string.earphone_music_picker_title)
-    // 内置清单比对已装
+    // 内置清单比对已装（保序：音乐在前、视频在后 → 自动选第一个即「优先音乐，其次视频」）
     val mediaPkgs = remember(context) { scanInstalledMainStream(context) }
     var pickerOpen by rememberSaveable { mutableStateOf(false) }
-    // 下拉选项：首项「未选择」+ 已装主流清单(label) + 末项「自定义应用」。
-    // 首项不能省：selectedPkg 为空时 spinner 的选中位置只能是 0，
-    // 没有「未选择」项就会把清单第一项（如网易云音乐）当成已选值显示在右侧。
+    // 首次且没配过：自动落一个默认。
+    //   - 有已装音视频 → 自动选清单第一个（优先音乐）；
+    //   - 什么音视频都没装 → 视为「自定义」，自动弹开应用选择。
+    // @author bomo 用户要求去掉「未选择」项：要么真实选中一个，要么直接进自定义选择。
+    val autoOpenedRef = remember { mutableStateOf(false) }
+    val resolvedPkg = remember(selectedPkg, mediaPkgs) {
+        if (selectedPkg.isNotEmpty()) selectedPkg else mediaPkgs.firstOrNull() ?: ""
+    }
+    LaunchedEffect(selectedPkg, mediaPkgs) {
+        if (selectedPkg.isEmpty() && !autoOpenedRef.value) {
+            autoOpenedRef.value = true
+            if (mediaPkgs.isNotEmpty()) {
+                onSelectedPkgChange(mediaPkgs.first())
+            } else {
+                pickerOpen = true
+            }
+        }
+    }
+    // 下拉选项：已装主流清单(label) + 末项「自定义应用」。去掉了「未选择」。
     val labels =
-        remember(context, mediaPkgs, customLabel, noneLabel) {
+        remember(context, mediaPkgs, customLabel) {
             buildList {
-                add(noneLabel)
                 for (pkg in mediaPkgs) add(appLabel(context, pkg) ?: pkg)
                 add(customLabel)
             }
         }
+    // selectedPkg 已由 LaunchedEffect 兜底成非空（resolvedPkg），索引映射：
+    // 在清单内 → mediaPkgs 序号；自定义 → labels 末位。
     val selIndex =
         when {
-            selectedPkg.isEmpty() -> 0
-            selectedPkg in mediaPkgs -> mediaPkgs.indexOf(selectedPkg) + 1
+            resolvedPkg in mediaPkgs -> mediaPkgs.indexOf(resolvedPkg)
             else -> labels.lastIndex // 自定义
         }
     // @author bomo 2026-10-19 修「音乐/视频应用」比上面「耳机连接提醒」整体右移一块：
@@ -343,19 +367,15 @@ private fun EarphoneMusicSelector(
         title = stringResource(R.string.earphone_music_selector_title),
         summary =
             when {
-                selectedPkg.isEmpty() -> noneLabel
-                selectedPkg in mediaPkgs -> appLabel(context, selectedPkg) ?: selectedPkg
-                else -> selectedPkg // 自定义包名
+                resolvedPkg.isEmpty() -> noneLabel // 极罕见：既无已装音视频又没选自定义
+                resolvedPkg in mediaPkgs -> appLabel(context, resolvedPkg) ?: resolvedPkg
+                else -> resolvedPkg // 自定义包名
             },
         enabled = enabled,
         startAction = { PreferenceIcon(Icons.Rounded.Headphones, enabled) },
         onSelectedIndexChange = { index ->
             when {
-                index == 0 -> onSelectedPkgChange("") // 「未选择」= 清掉自定义应用
-                index <= mediaPkgs.size -> {
-                    // 切回清单项：写入该项，原自定义包名失效
-                    onSelectedPkgChange(mediaPkgs[index - 1])
-                }
+                index in mediaPkgs.indices -> onSelectedPkgChange(mediaPkgs[index])
                 else -> {
                     // 选中「自定义应用」：打开应用选择弹层
                     pickerOpen = true
@@ -399,4 +419,42 @@ private fun launchBubblePosEdit(context: android.content.Context) {
         context.startActivity(i)
     } catch (_: Exception) {
     }
+}
+
+/** @author bomo 2026-10-22：链接气泡落地浏览器选择器（默认系统默认浏览器，可另选已装浏览器）。 */
+@Composable
+private fun BrowserSelector(
+    selectedPkg: String,
+    onSelectedChange: (String) -> Unit,
+    enabled: Boolean,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val defaultLabel = stringResource(R.string.browser_selector_default)
+    val customLabel = stringResource(R.string.browser_selector_title)
+    // 已装浏览器（能处理 http:// 的 view intent）
+    val browsers = remember(context) {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("http://example.com"))
+        context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+            .map { it.activityInfo.packageName }
+            .distinct()
+    }
+    // 选项：默认浏览器 + 已装浏览器清单
+    val labels = remember(context, browsers, defaultLabel) {
+        buildList {
+            add(defaultLabel)
+            for (pkg in browsers) add(appLabel(context, pkg) ?: pkg)
+        }
+    }
+    val selIndex = if (selectedPkg.isEmpty()) 0 else (browsers.indexOf(selectedPkg) + 1).takeIf { it > 0 } ?: 0
+    OverlaySpinnerPreference(
+        items = labels.map { DropdownItem(text = it) },
+        selectedIndex = selIndex,
+        title = customLabel,
+        summary = if (selectedPkg.isEmpty()) defaultLabel else (appLabel(context, selectedPkg) ?: selectedPkg),
+        enabled = enabled,
+        startAction = { PreferenceIcon(Icons.Rounded.Public, enabled) },
+        onSelectedIndexChange = { index ->
+            if (index == 0) onSelectedChange("") else onSelectedChange(browsers[index - 1])
+        },
+    )
 }

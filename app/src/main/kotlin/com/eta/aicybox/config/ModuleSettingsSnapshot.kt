@@ -47,6 +47,8 @@ internal data class ModuleSettingsSnapshot(
     val linkBubbleEnabled: Boolean = ModulePreferences.DEFAULT_LINK_BUBBLE_ENABLED,
     val shareBubbleEnabled: Boolean = ModulePreferences.DEFAULT_SHARE_BUBBLE_ENABLED,
     val browserBubbleEnabled: Boolean = ModulePreferences.DEFAULT_BROWSER_BUBBLE_ENABLED,
+    /** @author bomo 链接识别落地浏览器包名（空 = 用系统默认浏览器）。 */
+    val browserPkg: String = ModulePreferences.DEFAULT_BROWSER_PKG,
     /** @author bomo 气泡位置（dp，相对屏幕左下角）。 */
     val bubblePosXDp: Int = ModulePreferences.DEFAULT_BUBBLE_POS_X_DP,
     val bubblePosYDp: Int = ModulePreferences.DEFAULT_BUBBLE_POS_Y_DP,
@@ -76,6 +78,7 @@ internal data class ModuleSettingsSnapshot(
             .putBoolean(ModulePreferences.KEY_LINK_BUBBLE_ENABLED, linkBubbleEnabled)
             .putBoolean(ModulePreferences.KEY_SHARE_BUBBLE_ENABLED, shareBubbleEnabled)
             .putBoolean(ModulePreferences.KEY_BROWSER_BUBBLE_ENABLED, browserBubbleEnabled)
+            .putString(ModulePreferences.KEY_BROWSER_PKG, browserPkg)
             .putInt(ModulePreferences.KEY_BUBBLE_POS_X_DP, bubblePosXDp)
             .putInt(ModulePreferences.KEY_BUBBLE_POS_Y_DP, bubblePosYDp)
             .putString(
@@ -315,6 +318,10 @@ internal data class ModuleSettingsSnapshot(
                     ModulePreferences.KEY_BROWSER_BUBBLE_ENABLED,
                     ModulePreferences.DEFAULT_BROWSER_BUBBLE_ENABLED,
                 ),
+                browserPkg = preferences.getString(
+                    ModulePreferences.KEY_BROWSER_PKG,
+                    ModulePreferences.DEFAULT_BROWSER_PKG,
+                ) ?: ModulePreferences.DEFAULT_BROWSER_PKG,
                 bubblePosXDp = preferences.getInt(
                     ModulePreferences.KEY_BUBBLE_POS_X_DP,
                     ModulePreferences.DEFAULT_BUBBLE_POS_X_DP,
