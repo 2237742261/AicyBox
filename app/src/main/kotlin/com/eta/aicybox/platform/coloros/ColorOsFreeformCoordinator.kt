@@ -170,9 +170,6 @@ internal class ColorOsFreeformCoordinator(
     private var paySwitchBaseActivity: String? = null
     private var payBarSwitchLandAt = 0L
 
-    /** @author bomo 连续/过快点击支付栏时，1 秒内只响应一次切换（防连点导致多次关窗/开窗叠加出问题）。 */
-    private var payBarSwitchBlockedUntil = 0L
-
     /** @author bomo 0.2.71 小窗被别的界面盖住了（支付宝指纹校验页等）→ 支付栏也一起藏起来。 */
     private var payBarCovered = false
 
@@ -654,16 +651,9 @@ internal class ColorOsFreeformCoordinator(
      * [PAY_SWITCH_DELAY_MS] 再启动；关不掉就直接开（宁可叠一个也别点了没反应）。
      */
     private fun switchPay(channel: PayChannel) {
+        // @author bomo 2026-10-22 节流已下沉到 PayBarOverlayView（被拦的点击不改高亮不回调），
+        // 这里不再防抖也不手动 select（高亮角色交给 View 层单一来源，避免高亮与小窗状态错位）。
         val now = SystemClock.uptimeMillis()
-        // @author bomo 连点防抖：1 秒内只响应一次切换，避免快速/频繁点击触发多次
-        // closeTopTask + startPay（关窗异步，连点会叠出脏状态，如多次关/开小窗、轮盘状态错乱）。
-        if (now < payBarSwitchBlockedUntil) {
-            logger(Log.DEBUG, "PAY_SWITCH_BLOCKED ${channel.storedValue} remain=${
-                (payBarSwitchBlockedUntil - now)}ms", null)
-            return
-        }
-        payBarSwitchBlockedUntil = now + PAY_SWITCH_BLOCK_MS
-        payBarView?.select(payBarOrder.indexOf(channel))
         // 旧窗要关、新窗还没出来，这段时间「没有小窗」是正常的，不许收栏。
         // 0.2.59 的坑：一点就 PAY_BAR_HIDDEN，于是新支付方式的小窗下方再也长不出支付栏。
         payBarSwitchUntil = now + PAY_BAR_SWITCH_GRACE_MS
@@ -1829,8 +1819,6 @@ internal class ColorOsFreeformCoordinator(
         /** @author bomo 切换支付方式时，等旧小窗收完再启动新页面的延迟。 */
         const val PAY_SWITCH_DELAY_MS = 250L
 
-        /** @author bomo 连点防抖窗口：支付栏切换过快会出问题，2.5 秒内只响应一次。 */
-        const val PAY_SWITCH_BLOCK_MS = 2500L
 
         /** @author bomo 连续多少拍读不到小窗才认为小窗真的关了（40ms 一拍 → 120ms）。 */
         const val PAY_BAR_MISSING_TICKS = 3
