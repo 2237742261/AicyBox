@@ -163,7 +163,7 @@ internal class PayBarOverlayView(
                 val hit = pressedIndex
                 pressedIndex = -1
                 if (index >= 0 && index == hit && index != selectedIndex) {
-                    // @author bomo 2026-10-22 切换节流：过快点击（相对上次成功切换 < 2500ms）直接忽略，
+                    // @author bomo 2026-10-22 切换节流：过快点击（相对上次成功切换 < 1200ms）直接忽略，
                     // 不改高亮也不回调 —— 否则小窗没切、高亮却跳走，之后想切回目标项会被“当前项不可点”挡住。
                     val now = SystemClock.uptimeMillis()
                     if (now - lastSwitchAt < SWITCH_BLOCK_MS) return true
@@ -193,8 +193,8 @@ internal class PayBarOverlayView(
         val BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
         const val SELECTED_COLOR = 0x1F000000
 
-        /** @author bomo 切换节流窗口：支付栏 1.8 秒内只响应一次切换。 */
-        const val SWITCH_BLOCK_MS = 1800L
+        /** @author bomo 切换节流窗口：支付栏 1.2 秒内只响应一次切换（2026-10-22 用户 1.8→1.5→1.2s）。 */
+        const val SWITCH_BLOCK_MS = 1200L
 
         /** 深色模式：深灰卡片底 + 白色 14% 选中圈（白底会晃眼）。 */
         val BACKGROUND_COLOR_DARK = 0xFF1F1F22.toInt()
