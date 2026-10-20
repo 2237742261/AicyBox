@@ -25,12 +25,6 @@
 
 > 原仓库是 [Mangi-11/FlymeFreeform](https://github.com/Mangi-11/FlymeFreeform) 的二开衍生版，历史适配档案见下文「本衍生版的改动」。
 
-## 预览
-
-<p align="center">
-  <img src="docs/images/preview.gif" width="360" alt="Flyme 小窗交互预览" />
-</p>
-
 ## 功能
 
 ### 小窗（Flyme 式轮盘）
