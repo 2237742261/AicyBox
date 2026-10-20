@@ -193,8 +193,8 @@ internal class PayBarOverlayView(
         val BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
         const val SELECTED_COLOR = 0x1F000000
 
-        /** @author bomo 切换节流窗口：支付栏 2.5 秒内只响应一次切换。 */
-        const val SWITCH_BLOCK_MS = 2500L
+        /** @author bomo 切换节流窗口：支付栏 1.8 秒内只响应一次切换。 */
+        const val SWITCH_BLOCK_MS = 1800L
 
         /** 深色模式：深灰卡片底 + 白色 14% 选中圈（白底会晃眼）。 */
         val BACKGROUND_COLOR_DARK = 0xFF1F1F22.toInt()

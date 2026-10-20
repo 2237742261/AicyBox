@@ -1256,20 +1256,7 @@ internal class ColorOsFreeformCoordinator(
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = bounds?.left ?: ((metrics.widthPixels - barWidth) / 2)
-            // @author bomo 首挂位置与 applyPayBarGeometry 完全一致（含 clamp + gap + 贴底判断），
-            // 否则首帧 addView 在 bounds.bottom 无 gap 处，下一拍 updateViewLayout 又加 gap，
-            // 栏首现时往下「哆嗦」了一下（用户反馈）。
-            if (bounds != null) {
-                x = bounds.left.coerceIn(0, (metrics.widthPixels - barWidth).coerceAtLeast(0))
-                val gap = (PAY_BAR_GAP_DP * metrics.density).toInt().coerceAtLeast(1)
-                var y = bounds.bottom + gap
-                if (y + barHeight > metrics.heightPixels) {
-                    y = bounds.bottom - gap - barHeight
-                }
-                y = y.coerceIn(0, (metrics.heightPixels - barHeight).coerceAtLeast(0))
-            } else {
-                y = metrics.heightPixels - barHeight
-            }
+            y = bounds?.bottom ?: (metrics.heightPixels - barHeight)
             setFitInsetsTypes(0)
             title = "FlymeFreeformPayBar"
         }
